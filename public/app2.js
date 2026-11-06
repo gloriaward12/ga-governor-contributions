@@ -490,7 +490,7 @@ function renderBattleground(main) {
 function render() {
   const main = $('#main');
   const hideFilters = tab === 'field';
-  $('#filters').style.display = hideFilters ? 'none' : ''; $('#chips').style.display = hideFilters ? 'none' : ''; $('#copyCsv').style.visibility = (hideFilters || tab === 'spending') ? 'hidden' : '';
+  $('#filters').style.display = hideFilters ? 'none' : ''; $('#chips').style.display = hideFilters ? 'none' : ''; $('#ftoggle').style.display = hideFilters ? 'none' : ''; $('#copyCsv').style.visibility = (hideFilters || tab === 'spending') ? 'hidden' : '';
   if (tab === 'field') { renderField(main); return; }
   if (tab === 'pbg') { renderBattleground(main); return; }
   if (D && CUR) { $('#title').textContent = D.meta.committee; $('#subtitle').textContent = D.meta._sub || ''; }
