@@ -486,15 +486,58 @@ function renderBattleground(main) {
   }
 }
 
+
+// ---------- cross-committee donor lookup: shows a searched donor's giving to the campaign and its leadership committee together ----------
+const XC = { cache: new Map(), stats: new Map(), seq: 0 };
+function xcPair() { const lead = FIELD.candidates.find(c => c.kind === 'leadership'); return lead ? [lead.ally, lead.id] : []; }
+async function xcData(id) {
+  if (D && D.meta && D.meta.id === id) return D;
+  if (XC.cache.has(id)) return XC.cache.get(id);
+  const r = await fetch(`data/cand-${id}.json?v=${encodeURIComponent(FIELD.generated || '')}`); const P = await r.json(); XC.cache.set(id, P); return P;
+}
+function xcStats(P) {                                   // per name-key totals for one committee (itemized, net of refunds), cached per data object
+  let m = XC.stats.get(P); if (m) return m; m = new Map();
+  const det = P.det, dict = P.dict, con = dict.ttype.indexOf('Contribution'), ret = dict.ttype.indexOf('Return Contribution');
+  for (let i = 0; i < det.tid.length; i++) {
+    const t = det.ttype[i]; if (t !== con && t !== ret) continue; const k = det.nkey[i];
+    let o = m.get(k); if (!o) { o = { name: dict.name[det.name[i]], city: dict.city[det.city[i]], state: dict.state[det.state[i]], zip: dict.zip[det.zip[i]], emp: dict.emp[det.emp[i]], total: 0, n: 0, last: -1 }; m.set(k, o); }
+    o.total += det.cents[i] / 100; if (t === con) { o.n++; if (det.day[i] > o.last) o.last = det.day[i]; }
+  }
+  XC.stats.set(P, m); return m;
+}
+function xcMatch(o, toks) { const hay = (o.name + ' ' + o.emp + ' ' + o.city + ' ' + o.zip).toLowerCase(); return toks.every(t => hay.includes(t)); }
+function renderCrossSearch(main) {
+  const q = (state.q || '').trim(); const pair = xcPair();
+  if (tab === 'field' || q.length < 3 || pair.length < 2) return;
+  const seq = ++XC.seq; const box = document.createElement('div'); box.className = 'card xsearch'; box.id = 'xsearch';
+  box.innerHTML = `<h3>Across the campaign and Project Battleground</h3><div class="note">Looking up “${esc(q)}” in both committees…</div>`;
+  main.insertAdjacentElement('afterbegin', box);
+  Promise.all(pair.map(xcData)).then(Ps => {
+    if (seq !== XC.seq || !box.isConnected) return;
+    const toks = q.toLowerCase().split(/\s+/).filter(Boolean); const maps = Ps.map(xcStats); const names = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).committee || id);
+    const keys = new Map();                              // name-key -> display info from whichever committee has it
+    maps.forEach((m, ci) => { for (const [k, o] of m) if (xcMatch(o, toks)) { if (!keys.has(k)) keys.set(k, o); } });
+    const rows = [...keys.entries()].map(([k, o]) => { const per = maps.map(m => m.get(k) || null); return { k, o, per, combined: per.reduce((s, x) => s + (x ? x.total : 0), 0) }; }).sort((a, b) => b.combined - a.combined);
+    if (!rows.length) { box.innerHTML = `<h3>Across the campaign and Project Battleground</h3><div class="note">No itemized gifts matching “${esc(q)}” in either committee. Gifts under $100 are reported without a name, and gifts under $1,000 made after the last disclosure (10/20/2026) have not been filed yet.</div>`; return; }
+    const both = rows.filter(r => r.per.every(Boolean)).length;
+    box.innerHTML = `<h3>Across the campaign and Project Battleground</h3>
+      <div class="note">${fmtN(rows.length)} matching donor${rows.length === 1 ? '' : 's'}${both ? `, ${fmtN(both)} gave to both` : ''}. Itemized giving net of refunds, matched by name; the committee you are viewing is marked. Tap a committee amount to switch to it with this search kept.</div>
+      <div class="tw" style="max-height:360px"><table><thead><tr><th>Donor</th><th>Location</th>${names.map((n, i) => `<th class="num">${esc(n)}${CUR && CUR.id === pair[i] ? ' <span class="pill">viewing</span>' : ''}</th>`).join('')}<th class="num">Combined</th></tr></thead><tbody>
+      ${rows.slice(0, 25).map(r => `<tr class="row"><td><b>${esc(r.o.name)}</b>${r.o.emp ? `<div class="small muted">${esc(r.o.emp)}</div>` : ''}</td><td>${esc(r.o.city)}${r.o.state ? ', ' + r.o.state : ''}</td>${r.per.map((x, i) => x ? `<td class="num"><a href="#" class="xc-go" data-id="${pair[i]}" data-q="${esc(r.o.name)}"><b>${fmt$(x.total)}</b></a><div class="small muted">${fmtN(x.n)} gift${x.n === 1 ? '' : 's'}, last ${dayStr(x.last)}</div></td>` : `<td class="num muted">—</td>`).join('')}<td class="num"><b>${fmt$(r.combined)}</b></td></tr>`).join('')}
+      </tbody></table></div>${rows.length > 25 ? `<div class="small muted" style="margin-top:6px">Showing 25 of ${fmtN(rows.length)}; refine the search to narrow it.</div>` : ''}`;
+    box.querySelectorAll('.xc-go').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const id = +a.dataset.id; const nm = a.dataset.q; $('#q').value = nm; state.q = nm.toLowerCase(); if (CUR && CUR.id === id) { apply(); return; } if (tab === 'pbg') { tab = 'donors'; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } loadCandidate(id); }));
+  }).catch(e => { if (box.isConnected) box.innerHTML = `<h3>Across the campaign and Project Battleground</h3><div class="note">Could not load the other committee: ${esc(e.message)}</div>`; });
+}
 // ---------- routing ----------
 function render() {
   const main = $('#main');
   const hideFilters = tab === 'field';
   $('#filters').style.display = hideFilters ? 'none' : ''; $('#chips').style.display = hideFilters ? 'none' : ''; $('#ftoggle').style.display = hideFilters ? 'none' : ''; $('#copyCsv').style.visibility = (hideFilters || tab === 'spending') ? 'hidden' : '';
   if (tab === 'field') { renderField(main); return; }
-  if (tab === 'pbg') { renderBattleground(main); return; }
+  if (tab === 'pbg') { renderBattleground(main); renderCrossSearch(main); return; }
   if (D && CUR) { $('#title').textContent = D.meta.committee; $('#subtitle').textContent = D.meta._sub || ''; }
   if (tab === 'overview') renderOverview(main); else if (tab === 'donors') renderDonors(main); else if (tab === 'intel') renderIntel(main); else if (tab === 'contribs') renderContribs(main); else if (tab === 'spending') renderSpending(main); else if (tab === 'geo') renderGeo(main); else if (tab === 'work') renderWork(main); else renderReports(main);
+  renderCrossSearch(main);
 }
 // extend the search blob with county, metro and sector once a candidate loads
 function extendSearch() {
