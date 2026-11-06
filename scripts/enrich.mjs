@@ -2,7 +2,7 @@
 // usage: node scripts/enrich.mjs <out_json_gz>
 import fs from 'node:fs'; import zlib from 'node:zlib';
 const OUT = process.argv[2] || 'data-raw/api_enrichment.json.gz';
-const FILERS = ['Keisha for Governor','Jackson for Governor, Inc.','Burt Jones for Georgia','Brad for Governor, Inc.','Carr for Georgia, Inc.','Georgia for Jason, Inc.','Duncan for Georgia','Mike Thurmond For Governor','Committee to Elect Derrick Jackson','Clark Dean for Governor','Friends of Ruwa','Olu Brown for Governor, Inc.','Chase Oliver for Governor','Yasger, Kenneth','Gregg Kirkpatrick for Governor','Pacetti, Andrew'];
+const FILERS = ['Keisha for Governor','Jackson for Governor, Inc.','Burt Jones for Georgia','Brad for Governor, Inc.','Carr for Georgia, Inc.','Georgia for Jason, Inc.','Duncan for Georgia','Mike Thurmond For Governor','Committee to Elect Derrick Jackson','Clark Dean for Governor','Friends of Ruwa','Olu Brown for Governor, Inc.','Chase Oliver for Governor','Yasger, Kenneth','Gregg Kirkpatrick for Governor','Pacetti, Andrew','Project Battleground Georgia'];
 const CONCURRENCY = +(process.env.ENRICH_CONCURRENCY || 4);
 const items = new Map();
 async function page(filer, stc, pn, st) {

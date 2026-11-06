@@ -36,8 +36,9 @@ button,input,select{font:inherit;color:inherit}
 .tabs button{text-align:left;background:none;border:0;border-left:2px solid transparent;padding:8px 10px;color:var(--rail-mute);cursor:pointer;border-radius:0;font-size:13.5px;line-height:1.3}
 .tabs button:hover{color:var(--rail-ink)}
 .tabs button[aria-selected="true"]{color:#fff;border-left-color:var(--gold);background:linear-gradient(90deg,rgba(185,138,47,.14),transparent 70%);font-weight:600}
-.tabs button[data-tab="field"]{margin-top:14px;padding-top:12px;border-top:1px solid #34425A;color:#E7C978}
-.tabs button[data-tab="field"][aria-selected="true"]{color:#F3DC9A}
+.tabs button[data-tab="field"]{margin-top:14px;padding-top:12px;border-top:1px solid #34425A}
+.tabs button[data-tab="field"],.tabs button[data-tab="pbg"]{color:#E7C978}
+.tabs button[data-tab="field"][aria-selected="true"],.tabs button[data-tab="pbg"][aria-selected="true"]{color:#F3DC9A}
 .fresh{margin-top:auto;font-size:11.5px;line-height:1.45;color:var(--rail-mute);border-top:1px solid #34425A;padding-top:12px}
 .fresh b{color:var(--rail-ink);font-weight:600}
 .fresh .by{margin-top:8px}
@@ -159,6 +160,7 @@ tr.click{cursor:pointer}
     <button role="tab" data-tab="work">Employers &amp; occupations</button>
     <button role="tab" data-tab="reports">Reports, refunds &amp; loans</button>
     <button role="tab" data-tab="field">Compare the field</button>
+    <button role="tab" data-tab="pbg">Project Battleground</button>
   </nav>
   <div class="fresh" id="fresh">Loading data…</div>
 </aside>
@@ -219,7 +221,9 @@ let FIELD=null,CUR=null;
 async function loadField(){
   const r=await fetch('data/field.json',{cache:'no-cache'});FIELD=await r.json();
   const sel=$('#cand');sel.innerHTML='';
-  for(const c of FIELD.candidates){const o=document.createElement('option');o.value=c.id;o.textContent=`${c.cand} (${c.party}) — ${c.committee}`;sel.appendChild(o);}
+  const gc=document.createElement('optgroup');gc.label='Candidate committees';const gl=document.createElement('optgroup');gl.label='Leadership committees';
+  for(const c of FIELD.candidates){const o=document.createElement('option');o.value=c.id;o.textContent=c.kind==='leadership'?`${c.committee} — allied with ${(FIELD.candidates.find(x=>x.id===c.ally)||{}).cand||''}`:`${c.cand} (${c.party}) — ${c.committee}`;(c.kind==='leadership'?gl:gc).appendChild(o);}
+  sel.appendChild(gc);if(gl.children.length)sel.appendChild(gl);
   sel.addEventListener('change',()=>{if(tab==='field')tab='overview';loadCandidate(+sel.value);});
   const h=(location.hash||'').slice(1);const m=h.match(/^cand-(\d+)/);
   let start=m?+m[1]:(FIELD.candidates.some(c=>c.id===100663)?100663:FIELD.candidates[0].id);if(!FIELD.candidates.some(c=>c.id===start))start=FIELD.candidates[0].id;
@@ -260,7 +264,8 @@ async function load(id){
   $('#from').min=isoStr(mn);$('#from').max=isoStr(mx);$('#to').min=isoStr(mn);$('#to').max=isoStr(mx);
   $('#title').textContent=D.meta.committee;
   const partyName={DEM:'Democrat',REP:'Republican',LIB:'Libertarian',OTH:'Independent / other',NON:'Nonpartisan'}[D.meta.party]||D.meta.party;
-  D.meta._sub=`${D.meta.candidate}, ${partyName}. ${fmtN(N+UN)} transactions filed from ${dayStr(mn)} through ${dayStr(mx)}.`;$('#subtitle').textContent=D.meta._sub;
+  const ally=D.meta.kind==='leadership'?(FIELD.candidates.find(x=>x.id===D.meta.ally)||{}):null;
+  D.meta._sub=ally?`Leadership committee allied with ${ally.cand} (${partyName}); a separate filer from ${ally.committee} with no contribution limits. ${fmtN(N+UN)} transactions filed from ${dayStr(mn)} through ${dayStr(mx)}.`:`${D.meta.candidate}, ${partyName}. ${fmtN(N+UN)} transactions filed from ${dayStr(mn)} through ${dayStr(mx)}.`;$('#subtitle').textContent=D.meta._sub;
   $('#fresh').innerHTML=`<b>Data as of ${esc(D.meta.extractedAsOf)}</b><br>Georgia Campaign Finance Commission bulk files${D.meta.apiRowsAdded?`, plus ${fmtN(D.meta.apiRowsAdded)} filings received through ${esc(D.meta.apiPulledAt)}`:''}.<div class="by">Prepared by Cura Consulting Group</div>`;
   // reset select options (dictionaries differ per candidate)
   for(const id2 of ['etype','ctype','report','state']){const s=$('#'+id2);const keep=[...s.options].filter(o=>o.value===''||o.value.startsWith('__'));s.innerHTML='';keep.forEach(o=>s.appendChild(o));}
@@ -275,8 +280,8 @@ async function load(id){
 }
 
 function bind(){
-  $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.tab;[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x===b));try{location.hash=tab==='field'?'field':`cand-${CUR.id}-${tab}`}catch(_){}render();});
-  const h=(location.hash||'').slice(1);const hm=h.match(/^(?:cand-\d+-)?(overview|donors|contribs|geo|work|reports|field)$/);if(hm){tab=hm[1];[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===tab));}
+  $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.tab;[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x===b));try{location.hash=(tab==='field'||tab==='pbg')?tab:`cand-${CUR.id}-${tab}`}catch(_){}render();});
+  const h=(location.hash||'').slice(1);const hm=h.match(/^(?:cand-\d+-)?(overview|donors|contribs|geo|work|reports|field|pbg)$/);if(hm){tab=hm[1];[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===tab));}
   let t;const deb=f=>{clearTimeout(t);t=setTimeout(f,180)};
   $('#q').addEventListener('input',()=>deb(()=>{state.q=$('#q').value.trim().toLowerCase();apply();}));
   $('#from').addEventListener('change',()=>{state.from=$('#from').value?Math.round((new Date($('#from').value+'T00:00:00Z')-EPOCH)/86400000):null;apply();});
@@ -428,8 +433,9 @@ function hbars(rows,opts={}){
 // ---------- render ----------
 function render(){
   const main=$('#main');
-  $('#filters').style.display=tab==='field'?'none':'';$('#chips').style.display=tab==='field'?'none':'';$('#copyCsv').style.visibility=tab==='field'?'hidden':'';
+  const hf=tab==='field'||tab==='pbg';$('#filters').style.display=hf?'none':'';$('#chips').style.display=hf?'none':'';$('#copyCsv').style.visibility=hf?'hidden':'';
   if(tab==='field'){renderField(main);return;}
+  if(tab==='pbg'){if(typeof renderBattleground==='function')renderBattleground(main);else main.innerHTML='<div class="loading">Loading…</div>';return;}
   if(D&&CUR){$('#title').textContent=D.meta.committee;$('#subtitle').textContent=D.meta._sub||'';}
   if(tab==='overview')renderOverview(main);else if(tab==='donors')renderDonors(main);else if(tab==='contribs')renderContribs(main);else if(tab==='geo')renderGeo(main);else if(tab==='work')renderWork(main);else renderReports(main);
 }
@@ -652,7 +658,7 @@ function multiLine(el,series,xlabels,opts={}){
 }
 let fieldSort={k:'net',dir:-1};
 function renderField(main){
-  const C=FIELD.candidates;C.forEach(c=>c.netEx=c.net-(c.selfFunding||0));
+  const C=FIELD.candidates.filter(c=>c.kind!=='leadership');C.forEach(c=>c.netEx=c.net-(c.selfFunding||0));
   $('#title').textContent='The 2026 field';$('#subtitle').textContent=`${C.length} committees registered for Governor, compared on the same basis.`;
   const key=fieldSort.k;const rows=[...C].sort((a,b)=>{const va=a[key]??-Infinity,vb=b[key]??-Infinity;if(typeof va==='number'||typeof vb==='number')return ((va||0)-(vb||0))*fieldSort.dir;return (va<vb?-1:va>vb?1:0)*fieldSort.dir;});
   const th=(k,l,num)=>`<th class="${num?'num':''} ${fieldSort.k===k?'on':''}" data-k="${k}">${l}${fieldSort.k===k?(fieldSort.dir<0?' ↓':' ↑'):''}</th>`;

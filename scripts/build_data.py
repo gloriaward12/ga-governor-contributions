@@ -32,6 +32,8 @@ CANDS = {  # entity id -> meta (PeachFile candidate registry, 2026 Georgia State
     102484: dict(cand='Kenneth Yasger', short='Yasger', party='REP'),
     102218: dict(cand='Gregg Kirkpatrick', short='Kirkpatrick', party='REP'),
     103705: dict(cand='Andrew Pacetti', short='Pacetti', party='OTH'),
+    # leadership committee (Non-Candidate Committee / Leadership Committee) allied with the Democratic nominee; no contribution limits apply
+    105433: dict(cand='Project Battleground Georgia', short='Battleground', party='DEM', kind='leadership', ally=100663),
 }
 LIMITS = {'Primary': 8400, 'Primary Runoff': 4800, 'General': 8400, 'General Runoff': 4800}
 
@@ -320,8 +322,8 @@ for fid, meta in CANDS.items():
     bandn = [int(((con['amt'] >= lo_) & (con['amt'] < hi_)).sum()) for lo_, hi_ in bands]
     donors = ind[ind['Contributor Type'] == 'Individual']['dkey'].nunique()
     reg = registry.get(fid, {})
-    # cross-candidate index (itemized gifts, net of refunds, by donor key)
-    for r in sub[sub['Transaction Sub Type'] != 'Unitemized Contribution'].to_dict('records'):
+    # cross-candidate index (itemized gifts, net of refunds, by donor key); leadership committees are compared separately
+    for r in ([] if meta.get('kind') == 'leadership' else sub[sub['Transaction Sub Type'] != 'Unitemized Contribution'].to_dict('records')):
         if r['Transaction Type'] not in ('Contribution', 'Return Contribution'): continue
         k = r['dkey']; cross[k]['gifts'][fid] = round(cross[k]['gifts'].get(fid, 0) + r['amt'], 2); cross[k]['n'][fid] = cross[k]['n'].get(fid, 0) + 1
         if k not in cross_meta or (not cross_meta[k].get('emp') and r['Contributor/Person Responsible for Loan Employer']):

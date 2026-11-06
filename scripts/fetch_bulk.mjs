@@ -1,9 +1,9 @@
-// Downloads the statewide PeachFile bulk files (contributions + expenditures) and keeps only the governor committees.
+// Downloads the statewide PeachFile bulk files (contributions + expenditures) and keeps only the governor committees and the Project Battleground Georgia leadership committee.
 // usage: node scripts/fetch_bulk.mjs <out_dir> [filingYears=2025,2026]
 import fs from 'node:fs';
 const OUT = process.argv[2] || 'data-raw';
 const YEARS = (process.argv[3] || '2025,2026').split(',');
-const IDS = new Set([100663,103524,101091,102576,100035,101067,101117,100753,100008,103570,100009,103725,104073,102484,102218,103705]);
+const IDS = new Set([100663,103524,101091,102576,100035,101067,101117,100753,100008,103570,100009,103725,104073,102484,102218,103705,105433]);  // 105433 = Project Battleground Georgia (leadership committee)
 fs.mkdirSync(OUT, { recursive: true });
 async function pull(code, file) {
   let header = null; const rows = [];

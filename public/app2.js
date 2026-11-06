@@ -98,8 +98,9 @@ function spendStats() {
   // average burn over the last 3 complete months of spend data
   const keys = [...monthly.keys()].sort((a, b) => a - b); const lastK = keys[keys.length - 1]; const full = keys.filter(k => k < lastK).slice(-3);
   const burn = full.length ? full.reduce((s, k) => s + monthly.get(k), 0) / full.length : (lastK != null ? monthly.get(lastK) : 0);
-  const coh = D.meta.cashOnHand; const runway = (coh != null && burn > 0) ? coh / burn : null;
-  return { spent, monthly, lastDay, burn, coh, runway, burnMonths: full.map(monthLabel) };
+  let coh = D.meta.cashOnHand, est = false; if (coh == null && D.meta.kind === 'leadership') { coh = Math.max(0, D.meta.net - spent); est = true; }
+  const runway = (coh != null && burn > 0) ? coh / burn : null;
+  return { spent, monthly, lastDay, burn, coh, est, runway, burnMonths: full.map(monthLabel) };
 }
 function briefText() {
   const det = D.det, un = D.unit, ttRet = D.ttIdx['Return Contribution'];
@@ -111,8 +112,8 @@ function briefText() {
   const s = [];
   s.push(`As of ${dayStr(D.maxDay)}, ${meta.committee} has raised ${fmt$(gross + ret)} net of refunds from ${fmtN(n)} contributions and ${fmtN(dk.size)} named donors.`);
   s.push(`The last 30 days brought in ${fmt$(M.w30.sum)}${M.chg30 != null ? ` (${signed(M.chg30)} versus the prior 30 days)` : ''} across ${fmtN(M.w30.n)} gifts, including ${fmtN(M.new30)} first-time donors; the average gift in that window was ${fmt$2(M.avg30)}.`);
-  s.push(`${fmtPct(small, gross)} of all dollars came in gifts under $200 and ${fmtPct(ga, item)} of itemized dollars came from Georgia addresses; ${fmtN(maxed)} donors have given the maximum for the primary or the general.`);
-  if (S.spent) s.push(`The committee has reported ${fmt$(S.spent)} in spending${S.coh != null ? ` and ${fmt$(S.coh)} cash on hand per the Commission's registry` : ''}${S.runway != null ? `, about ${S.runway.toFixed(1)} months of runway at the recent burn of ${fmt$(S.burn)} per month` : ''}.`);
+  s.push(`${fmtPct(small, gross)} of all dollars came in gifts under $200 and ${fmtPct(ga, item)} of itemized dollars came from Georgia addresses; ${D.meta.kind === 'leadership' ? `${fmtN(ds.filter(d => d.total >= 8400).length)} funders have given more than the $8,400 a candidate committee could accept from them` : `${fmtN(maxed)} donors have given the maximum for the primary or the general`}.`);
+  if (S.spent) s.push(`The committee has reported ${fmt$(S.spent)} in spending${S.coh != null ? (S.est ? ` and roughly ${fmt$(S.coh)} left (raised less spent; the Commission publishes no registry balance for non-candidate committees)` : ` and ${fmt$(S.coh)} cash on hand per the Commission's registry`) : ''}${S.runway != null ? `, about ${S.runway.toFixed(1)} months of runway at the recent burn of ${fmt$(S.burn)} per month` : ''}.`);
   return s.join(' ');
 }
 function donorAggAll() { const save = SEL; SEL = []; for (let i = 0; i < N; i++) if (D.det.ttype[i] === D.ttIdx['Contribution'] || D.det.ttype[i] === D.ttIdx['Return Contribution']) SEL.push(i); const r = donorAgg(); SEL = save; return r; }
@@ -181,7 +182,7 @@ function renderSpending(main) {
   const tile = (l, v, d) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
   const raisedNet = D.meta.net;
   main.innerHTML = `
-  <div class="kpis">${tile('Spent', fmt$(spent), `${fmtN(nParents)} expenditures${XSEL.length !== x.tid.length ? ' matching filters' : ' reported'}`)}${tile('Cash on hand', S.coh != null ? fmt$(S.coh) : '—', `Commission registry${D.meta.registrySpent != null ? `; registry spend ${fmt$(D.meta.registrySpent)}` : ''}`)}${tile('Recent burn', fmt$(S.burn) + '/mo', S.burnMonths.length ? `average of ${S.burnMonths.join(', ')}` : 'latest month')}${tile('Runway', S.runway != null ? S.runway.toFixed(1) + ' months' : '—', 'cash on hand ÷ recent burn')}${tile('Spent per dollar raised', raisedNet ? '$' + (S.spent / raisedNet).toFixed(2) : '—', `${fmt$(S.spent)} spent of ${fmt$(raisedNet)} raised`)}${tile('Paid to Georgia vendors', fmtPct(inState, inState + outState), `${fmt$(inState)} in state, ${fmt$(outState)} out of state`)}</div>
+  <div class="kpis">${tile('Spent', fmt$(spent), `${fmtN(nParents)} expenditures${XSEL.length !== x.tid.length ? ' matching filters' : ' reported'}`)}${tile(S.est ? 'Estimated balance' : 'Cash on hand', S.coh != null ? fmt$(S.coh) : '—', S.est ? 'raised less spent; no registry balance for non-candidate committees' : `Commission registry${D.meta.registrySpent != null ? `; registry spend ${fmt$(D.meta.registrySpent)}` : ''}`)}${tile('Recent burn', fmt$(S.burn) + '/mo', S.burnMonths.length ? `average of ${S.burnMonths.join(', ')}` : 'latest month')}${tile('Runway', S.runway != null ? S.runway.toFixed(1) + ' months' : '—', 'cash on hand ÷ recent burn')}${tile('Spent per dollar raised', raisedNet ? '$' + (S.spent / raisedNet).toFixed(2) : '—', `${fmt$(S.spent)} spent of ${fmt$(raisedNet)} raised`)}${tile('Paid to Georgia vendors', fmtPct(inState, inState + outState), `${fmt$(inState)} in state, ${fmt$(outState)} out of state`)}</div>
   <div class="filters" style="padding:12px 0 0;border:0;background:none">
     <div class="f search"><label for="xq">Search payee, purpose or description</label><input id="xq" value="${esc(xQ)}" placeholder="e.g. media, payroll, Stripe"></div>
     <div class="f"><label for="xp">Category</label><select id="xp"><option value="">All categories</option>${DICT.cat.map((p, i) => p ? `<option value="${i}" ${String(i) === xPurpose ? 'selected' : ''}>${esc(p)}</option>` : '').join('')}</select></div>
@@ -247,6 +248,7 @@ function renderIntel(main) {
   const seg = v => `<button class="seg ${intelView === v ? 'on' : ''}" data-v="${v}">${{ headroom: 'Headroom to the limit', cross: 'Cross-candidate donors', cohorts: 'Donor cohorts', compliance: 'Review flags' }[v]}</button>`;
   main.innerHTML = `
   <div class="kpis">${tile('Headroom among proven donors', fmtK(totalHeadroom), `${fmtN(hr.length)} donors who have given $${fmtN(hrMin)}+ could legally give this much more`)}${tile('Maxed for primary or general', fmtN(maxedAny), `${fmtN(genRoom.length)} maxed in the primary but still have general room`)}${tile('Lapsed donors', fmtN(lapsed.length), 'gave $100+ but nothing in the last 180 days')}${tile('Upgrade candidates', fmtN(upgrade.length), '3+ gifts, under $1,000 total, active in last 180 days')}${tile('Over-limit review items', fmtN(over.length), 'donors exceeding a per-election cap after combining addresses')}</div>
+  ${D.meta.kind === 'leadership' ? `<div class="small muted" style="margin:-4px 0 10px">This is a leadership committee: Georgia sets no contribution limits for it, so headroom and over-limit figures are shown against the candidate-committee limits for reference only, and cross-candidate matching is in the Project Battleground section.</div>` : ''}
   <div class="segs">${seg('headroom')}${seg('cross')}${seg('cohorts')}${seg('compliance')}</div>
   <div id="intelBody"></div>`;
   const body = $('#intelBody');
@@ -263,7 +265,7 @@ function renderIntel(main) {
     } else if (intelView === 'cross') {
       body.innerHTML = `<div class="card"><h3>Cross-candidate donors</h3><div class="note">Loading…</div></div>`;
       ensureCross().then(C => {
-        const cid = String(CUR.id); const byId = Object.fromEntries(FIELD.candidates.map(c => [String(c.id), c]));
+        const cid = String(CUR.id); const byId = Object.fromEntries(FIELD.candidates.filter(c => c.kind !== 'leadership').map(c => [String(c.id), c]));
         let list = C.donors.filter(d => crossAll || d.gifts[cid] != null);
         const others = new Map(); for (const d of list) for (const id of Object.keys(d.gifts)) if (id !== cid) { const o = others.get(id) || { id, n: 0, total: 0 }; o.n++; o.total += d.gifts[id]; others.set(id, o); }
         const oth = [...others.values()].sort((a, b) => b.n - a.n);
@@ -344,7 +346,7 @@ function renderWork(main) {
 // ---------- field: spending columns + raised vs spent ----------
 function renderField(main) {
   BASE.renderField(main);
-  const C = FIELD.candidates;
+  const C = FIELD.candidates.filter(c => c.kind !== 'leadership');
   const burnOf = c => { const ks = Object.keys(c.monthlySpend || {}).map(Number).sort((a, b) => a - b); const full = ks.slice(0, -1).slice(-3); return full.length ? full.reduce((s, k) => s + c.monthlySpend[k], 0) / full.length : (ks.length ? c.monthlySpend[ks[ks.length - 1]] : 0); };
   const rows = [...C].filter(c => c.net > 0 || c.spent > 0).sort((a, b) => (b.cashOnHand || 0) - (a.cashOnHand || 0));
   const card = document.createElement('div'); card.className = 'card'; card.style.marginTop = '14px';
@@ -359,12 +361,139 @@ function renderField(main) {
   barsChart($('#f3'), [{ name: 'Raised', color: 'var(--s1)', values: chartRows.map(c => c.net) }, { name: 'Spent', color: 'var(--s8)', values: chartRows.map(c => c.spent) }, { name: 'Cash on hand', color: 'var(--s4)', values: chartRows.map(c => c.cashOnHand || 0) }], chartRows.map(c => c.short), { grouped: true, h: 280 });
 }
 
+// ---------- Project Battleground Georgia: the leadership committee, read alongside the campaign ----------
+const PBG_ID = 105433;
+let PBG = null, PBG_ALLY = null, pbgFunderSort = { k: 'total', dir: -1 };
+async function ensurePBG() {
+  if (PBG) return PBG;
+  const r = await fetch(`data/cand-${PBG_ID}.json?v=${encodeURIComponent(FIELD.generated || '')}`); if (!r.ok) throw new Error('Project Battleground data is not in this build yet');
+  PBG = await r.json(); return PBG;
+}
+async function ensureAlly(id) {
+  if (D && D.meta && D.meta.id === id) return D;                      // the campaign is already loaded in the main view
+  if (PBG_ALLY && PBG_ALLY.meta.id === id) return PBG_ALLY;
+  const r = await fetch(`data/cand-${id}.json?v=${encodeURIComponent(FIELD.generated || '')}`); PBG_ALLY = await r.json(); return PBG_ALLY;
+}
+function pbgDay(P, d) { const t = new Date(new Date(P.meta.epoch + 'T00:00:00Z').getTime() + d * 86400000); return (t.getUTCMonth() + 1).toString().padStart(2, '0') + '/' + t.getUTCDate().toString().padStart(2, '0') + '/' + t.getUTCFullYear(); }
+function pbgMonthKey(P, d) { const t = new Date(new Date(P.meta.epoch + 'T00:00:00Z').getTime() + d * 86400000); return t.getUTCFullYear() * 12 + t.getUTCMonth(); }
+function pbgAnalyze(P) {
+  const dict = P.dict, det = P.det, un = P.unit, x = P.exp; const n = det.tid.length;
+  const ttCon = dict.ttype.indexOf('Contribution'), ttRet = dict.ttype.indexOf('Return Contribution');
+  const ctCand = dict.ctype.indexOf('Candidate / Candidate Committee'), ctNCC = dict.ctype.indexOf('Non-Candidate Committee'), ctCorp = dict.ctype.indexOf('Corporation / Business / Unregistered Committee');
+  const ga = dict.state.indexOf('GA');
+  // per-funder totals (itemized, net of refunds)
+  const funders = new Map(); let gross = 0, refunds = 0, inkind = 0, gaSum = 0, itemSum = 0, maxDay = -1, minDay = 1e9;
+  for (let i = 0; i < n; i++) {
+    const t = det.ttype[i]; if (t !== ttCon && t !== ttRet) continue; const a = det.cents[i] / 100; const d = det.day[i];
+    if (d > maxDay) maxDay = d; if (d < minDay) minDay = d;
+    if (t === ttRet) { refunds += a; } else { gross += a; itemSum += a; if (det.state[i] === ga) gaSum += a; if (dict.sub[det.sub[i]] === 'In-Kind Contribution') inkind += a; }
+    const k = det.dkey[i]; let o = funders.get(k);
+    if (!o) { o = { k, name: dict.name[det.name[i]], ctype: det.ctype[i], city: dict.city[det.city[i]], state: dict.state[det.state[i]], emp: dict.emp[det.emp[i]], occ: dict.occ[det.occ[i]], nkey: det.nkey[i], n: 0, total: 0, first: 1e9, last: -1, late: 0 }; funders.set(k, o); }
+    o.total += a; if (t === ttCon) o.n++; if (d < o.first) o.first = d; if (d > o.last) o.last = d;
+    if (/two business day/i.test(dict.report[det.report[i]])) o.late += a;
+  }
+  let unitSum = 0, unitN = 0; for (let i = 0; i < un.day.length; i++) { if (un.ttype[i] === ttRet) { refunds += un.cents[i] / 100; continue; } unitSum += un.cents[i] / 100; unitN++; gross += un.cents[i] / 100; if (un.day[i] > maxDay) maxDay = un.day[i]; }
+  const net = gross + refunds;
+  // funding sources
+  const isDGA = o => /democratic governors/i.test(o.name);
+  const cls = o => isDGA(o) ? 'Democratic Governors Association' : o.ctype === ctCand ? 'Transfers from candidate committees' : o.ctype === ctNCC ? 'PACs, unions and party committees' : o.ctype === ctCorp ? 'Businesses and organizations' : o.total >= 8400 ? 'Individuals giving above the $8,400 candidate limit' : 'Individuals at or below $8,400';
+  const src = new Map();
+  for (const o of funders.values()) { const c = cls(o); const r = src.get(c) || { k: c, label: c, total: 0, n: 0, donors: 0 }; r.total += o.total; r.n += o.n; r.donors++; src.set(c, r); }
+  if (unitSum) src.set('unit', { k: 'unit', label: 'Unitemized (small-dollar)', total: unitSum, n: unitN, donors: 0 });
+  const sources = [...src.values()].sort((a, b) => b.total - a.total);
+  const fromAlly = [...funders.values()].filter(o => o.ctype === ctCand).reduce((s, o) => s + o.total, 0);
+  const dga = [...funders.values()].filter(isDGA).reduce((s, o) => s + o.total, 0);
+  const above = [...funders.values()].filter(o => o.ctype !== ctCand && o.total > 8400).reduce((s, o) => s + o.total, 0);
+  // late money (Two-Business-Day reports)
+  const late = []; let lateSum = 0;
+  for (let i = 0; i < n; i++) { if (det.ttype[i] !== ttCon || !/two business day/i.test(dict.report[det.report[i]])) continue; const a = det.cents[i] / 100; lateSum += a; late.push({ day: det.day[i], name: dict.name[det.name[i]], ctype: dict.ctype[det.ctype[i]], city: dict.city[det.city[i]], state: dict.state[det.state[i]], a }); }
+  late.sort((a, b) => b.day - a.day || b.a - a.a);
+  const lateFrom = late.length ? Math.min(...late.map(l => l.day)) : null;
+  // spending
+  const xret = dict.xttype.indexOf('Return Expenditure'); const hasKids = new Set(); for (let i = 0; i < x.tid.length; i++) if (x.child[i]) hasKids.add(x.tid[i]);
+  let spent = 0, lastSpend = -1; const cats = new Map(), vendors = new Map(), mspend = new Map(); const gaX = dict.pstate.indexOf('GA'); let inState = 0, outState = 0;
+  for (let i = 0; i < x.tid.length; i++) {
+    const a = x.cents[i] / 100 * (x.xttype[i] === xret ? -1 : 1);
+    if (!x.child[i]) { spent += a; const c = dict.cat[x.cat[i]]; cats.set(c, (cats.get(c) || 0) + a); const k = pbgMonthKey(P, x.day[i]); mspend.set(k, (mspend.get(k) || 0) + a); if (x.day[i] > lastSpend) lastSpend = x.day[i]; if (x.pstate[i] === gaX) inState += a; else if (x.pstate[i]) outState += a; }
+    if (!x.child[i] && hasKids.has(x.tid[i])) continue;
+    const k = x.payee[i]; const v = vendors.get(k) || { k, label: dict.payee[k] || '(unitemized)', city: dict.pcity[x.pcity[i]], state: dict.pstate[x.pstate[i]], n: 0, total: 0, cats: new Map() }; v.n++; v.total += a; const c = dict.cat[x.cat[i]]; v.cats.set(c, (v.cats.get(c) || 0) + a); vendors.set(k, v);
+  }
+  const catRows = [...cats.entries()].map(([label, total]) => ({ k: label, label, total, n: 0 })).sort((a, b) => b.total - a.total);
+  for (const r of catRows) for (let i = 0; i < x.tid.length; i++) if (!x.child[i] && dict.cat[x.cat[i]] === r.label) r.n++;
+  const vendorRows = [...vendors.values()].map(v => ({ ...v, top: [...v.cats.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || '' })).sort((a, b) => b.total - a.total);
+  const media = cats.get('Advertising & media') || 0;
+  // monthly receipts
+  const mrec = new Map(); for (let i = 0; i < n; i++) { if (det.ttype[i] !== ttCon) continue; const k = pbgMonthKey(P, det.day[i]); mrec.set(k, (mrec.get(k) || 0) + det.cents[i] / 100); } for (let i = 0; i < un.day.length; i++) { if (un.ttype[i] !== ttCon) continue; const k = pbgMonthKey(P, un.day[i]); mrec.set(k, (mrec.get(k) || 0) + un.cents[i] / 100); }
+  return { n, gross, refunds, net, inkind, unitSum, unitN, gaSum, itemSum, minDay, maxDay, funders: [...funders.values()], sources, fromAlly, dga, above, late, lateSum, lateFrom, spent, lastSpend, catRows, vendorRows, media, inState, outState, mrec, mspend };
+}
+function renderBattleground(main) {
+  const ally = FIELD.candidates.find(c => c.id === 100663) || {};
+  $('#title').textContent = 'Project Battleground Georgia'; $('#subtitle').textContent = `Leadership committee allied with ${ally.cand || 'the Democratic nominee'}; a separate filer from ${ally.committee || 'the campaign'}.`;
+  main.innerHTML = '<div class="loading">Loading Project Battleground Georgia…</div>';
+  ensurePBG().then(P => {
+    const A = pbgAnalyze(P); const tile = (l, v, d) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+    const balance = Math.max(0, A.net - A.spent);
+    const dstr = d => pbgDay(P, d);
+    const comb = { raised: (ally.net || 0) + A.net - A.fromAlly, spent: (ally.spent || 0) + A.spent - A.fromAlly, cash: (ally.cashOnHand || 0) + balance };
+    const others = FIELD.candidates.filter(c => c.kind !== 'leadership' && c.id !== 100663 && c.net > 250000).sort((a, b) => b.net - a.net).slice(0, 5);
+    const th = (k, l, num) => `<th class="${num ? 'num' : ''} ${pbgFunderSort.k === k ? 'on' : ''}" data-k="${k}">${l}${pbgFunderSort.k === k ? (pbgFunderSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+    const funders = A.funders.filter(f => f.n > 0).sort((a, b) => { const k = pbgFunderSort.k; const va = a[k], vb = b[k]; if (typeof va === 'number') return (va - vb) * pbgFunderSort.dir || b.total - a.total; return (va < vb ? -1 : va > vb ? 1 : 0) * pbgFunderSort.dir; });
+    const ctShort = c => ({ 'Individual': '', 'Corporation / Business / Unregistered Committee': 'Business', 'Non-Candidate Committee': 'Committee', 'Candidate / Candidate Committee': 'Candidate committee' }[c] ?? c);
+    const keys = [...new Set([...A.mrec.keys(), ...A.mspend.keys()])].sort((a, b) => a - b); const kmin = keys[0], kmax = keys[keys.length - 1]; const mcats = [], R = [], SP = []; for (let k = kmin; k <= kmax; k++) { mcats.push(monthLabel(k)); R.push(A.mrec.get(k) || 0); SP.push(A.mspend.get(k) || 0); }
+    main.innerHTML = `
+    <div class="brief"><div class="brief-h"><h3>What this committee is</h3><span class="muted small">Registered with the Commission as a Non-Candidate Committee, subtype Leadership Committee (filer ${PBG_ID}).</span></div>
+      <p>Georgia's 2021 leadership-committee law lets each major party's nominee for governor raise and spend through a committee with <b>no contribution limits</b>, in coordination with the campaign. Project Battleground Georgia is that vehicle on the Democratic side. Its money therefore looks nothing like the campaign's: ${fmtPct(A.above, A.gross)} of its dollars came in amounts larger than the $8,400 a candidate committee could have accepted from the same giver, ${fmtPct(A.dga, A.gross)} from the Democratic Governors Association alone, and ${fmt$(A.fromAlly)} was transferred in from ${esc(ally.committee || 'the campaign')} itself. The per-donor limit views elsewhere in this tool do not apply here. Read the two committees together for the true size of the operation; the combined figures below net out the transfers so the same dollar is not counted twice.</p></div>
+    <div class="kpis" style="margin-top:14px">${tile('Raised, net of refunds', fmt$(A.net), `${fmtN(A.n + A.unitN)} contributions, ${dstr(A.minDay)} through ${dstr(A.maxDay)}`)}${tile('Spent', fmt$(A.spent), `as filed through ${A.lastSpend >= 0 ? dstr(A.lastSpend) : '—'}`)}${tile('Estimated balance', fmt$(balance), 'raised less spent; no registry balance is published for non-candidate committees')}${tile('Funders', fmtN(A.funders.filter(f => f.n > 0).length), `${fmtN(A.funders.filter(f => f.n > 0 && f.total >= 100000).length)} gave $100,000 or more`)}${tile('Largest single source', fmtPct(A.dga, A.gross), `Democratic Governors Association, ${fmt$(A.dga)}`)}${tile('Above the candidate limit', fmtPct(A.above, A.gross), `${fmt$(A.above)} from givers whose total exceeds $8,400`)}${tile('Late money', fmt$(A.lateSum), A.lateFrom != null ? `${fmtN(A.late.length)} gifts on Two-Business-Day reports since ${dstr(A.lateFrom)}` : 'no Two-Business-Day reports')}${tile('Spent on advertising and media', fmtPct(A.media, A.spent), `${fmt$(A.media)} of ${fmt$(A.spent)}`)}</div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h3>Campaign and leadership committee together</h3><div class="note">Raised and spent for ${esc(ally.committee || 'the campaign')} and Project Battleground Georgia, with the ${fmt$(A.fromAlly)} the campaign transferred to the committee removed from both sides. Balance combines the campaign's registry cash on hand with the committee's estimated balance. Other committees are shown for scale.</div>
+        <div class="tw" style="max-height:none"><table><thead><tr><th>Committee</th><th class="num">Raised (net)</th><th class="num">Spent</th><th class="num">Balance</th></tr></thead><tbody>
+        <tr class="row"><td>${esc(ally.committee || '')}</td><td class="num">${fmt$(ally.net || 0)}</td><td class="num">${fmt$(ally.spent || 0)}</td><td class="num">${ally.cashOnHand != null ? fmt$(ally.cashOnHand) : '—'}</td></tr>
+        <tr class="row"><td>Project Battleground Georgia</td><td class="num">${fmt$(A.net)}</td><td class="num">${fmt$(A.spent)}</td><td class="num">${fmt$(balance)}<div class="small muted">estimate</div></td></tr>
+        <tr class="row" style="font-weight:600;background:var(--field)"><td>Combined, transfers netted out</td><td class="num">${fmt$(comb.raised)}</td><td class="num">${fmt$(comb.spent)}</td><td class="num">${fmt$(comb.cash)}</td></tr>
+        ${others.map(c => `<tr class="row"><td class="muted">${esc(c.committee)} <span class="pill" style="border-color:${PARTY_COLOR[c.party] || 'var(--rule)'};color:${PARTY_COLOR[c.party] || 'var(--ink2)'}">${c.party}</span></td><td class="num muted">${fmt$(c.net)}</td><td class="num muted">${fmt$(c.spent)}</td><td class="num muted">${c.cashOnHand != null ? fmt$(c.cashOnHand) : '—'}</td></tr>`).join('')}
+        </tbody></table></div><div class="small muted" style="margin-top:8px">Other committees' figures are their own candidate committees only; any allied leadership committee on their side is not included.</div></div>
+      <div class="card"><h3>Raised vs. spent by month</h3><div class="note">Gross receipts against expenditures, full committee record. Spending after the last disclosure report is not yet filed.</div><div class="legend"><span><i style="background:var(--s1)"></i>Raised</span><span><i style="background:var(--s8)"></i>Spent</span></div><div id="pb1"></div></div>
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h3>Where the money comes from</h3><div class="note">Each funder counted once, by what kind of giver it is. Individuals are split by whether their total exceeds the $8,400 a candidate committee could take from them.</div>${hbars(A.sources)}</div>
+      <div class="card"><h3>Where the money goes</h3><div class="note">Spend category from the committee's reported purpose where it is specific, otherwise from the payment description.</div>${hbars(A.catRows.slice(0, 12))}<div class="small muted" style="margin-top:8px">${fmtPct(A.inState, A.inState + A.outState)} paid to Georgia payees (${fmt$(A.inState)} in state, ${fmt$(A.outState)} out of state).</div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Funders</h3><div class="note">Itemized giving net of refunds, combined by name and ZIP. "Late" is the part reported on Two-Business-Day reports after the last regular disclosure. <button class="btn" id="pbcsv" style="margin-left:8px">Copy funders CSV</button></div>
+      <div class="tw" style="max-height:560px"><table><thead><tr>${th('name', 'Funder')}<th>Type</th><th>Location</th><th>Employer / occupation</th>${th('n', 'Gifts', 1)}${th('total', 'Total', 1)}${th('late', 'Late', 1)}<th class="num">Share</th>${th('last', 'Last gift', 1)}</tr></thead><tbody>
+      ${funders.slice(0, 400).map(f => `<tr class="row"><td><b>${esc(f.name)}</b></td><td class="small">${esc(ctShort(P.dict.ctype[f.ctype]))}</td><td>${esc(f.city)}${f.state ? ', ' + f.state : ''}</td><td class="small">${esc(f.emp)}${f.occ ? `<div class="muted">${esc(f.occ)}</div>` : ''}</td><td class="num">${fmtN(f.n)}</td><td class="num"><b>${fmt$(f.total)}</b></td><td class="num">${f.late ? fmt$(f.late) : ''}</td><td class="num">${pct(f.total, A.gross)}</td><td class="num">${dstr(f.last)}</td></tr>`).join('')}
+      </tbody></table></div><div class="small muted" style="margin-top:8px">Showing ${fmtN(Math.min(400, funders.length))} of ${fmtN(funders.length)} funders.</div></div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h3>Late money</h3><div class="note">Contributions on Two-Business-Day reports, newest first. These arrive before the next regular disclosure and are the only view of the final stretch.</div>
+        <div class="tw" style="max-height:480px"><table><thead><tr><th>Date</th><th>Funder</th><th class="num">Amount</th></tr></thead><tbody>${A.late.slice(0, 150).map(l => `<tr class="row"><td>${dstr(l.day)}</td><td><b>${esc(l.name)}</b>${l.ctype !== 'Individual' ? `<span class="pill">${esc(ctShort(l.ctype))}</span>` : ''}<div class="small muted">${esc(l.city)}${l.state ? ', ' + l.state : ''}</div></td><td class="num">${fmt$(l.a)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">None filed.</td></tr>'}</tbody></table></div></div>
+      <div class="card"><h3>Top payees</h3><div class="note">Reimbursements and card payments are attributed to the end recipient when itemized.</div>
+        <div class="tw" style="max-height:480px"><table><thead><tr><th>Payee</th><th>Location</th><th>Mostly for</th><th class="num">Payments</th><th class="num">Total</th></tr></thead><tbody>${A.vendorRows.slice(0, 40).map(v => `<tr class="row"><td><b>${esc(v.label)}</b></td><td>${esc(v.city)}${v.state ? ', ' + v.state : ''}</td><td class="small">${esc(v.top)}</td><td class="num">${fmtN(v.n)}</td><td class="num">${fmt$(v.total)}</td></tr>`).join('')}</tbody></table></div></div>
+    </div>
+    <div class="card" style="margin-top:14px" id="pbOverlap"><h3>Donors to both committees</h3><div class="note">Computing the overlap with ${esc(ally.committee || 'the campaign')}…</div></div>
+    <div class="src">Project Battleground Georgia filings from the Commission's bulk Contribution and Expenditure files (filing year 2026) plus Two-Business-Day reports from the public search API. The full committee record is also available under the Committee selector, where every other section of this tool applies to it.</div>`;
+    barsChart($('#pb1'), [{ name: 'Raised', color: 'var(--s1)', values: R }, { name: 'Spent', color: 'var(--s8)', values: SP }], mcats, { grouped: true, h: 280, markers: electionMarkersMonthly(kmin) });
+    main.querySelectorAll('th[data-k]').forEach(h => h.addEventListener('click', () => { const k = h.dataset.k; if (pbgFunderSort.k === k) pbgFunderSort.dir *= -1; else { pbgFunderSort.k = k; pbgFunderSort.dir = k === 'name' ? 1 : -1; } renderBattleground(main); }));
+    $('#pbcsv').addEventListener('click', async () => { const q = s => { s = String(s ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }; const out = [['Funder', 'Type', 'City', 'State', 'Employer', 'Occupation', 'Gifts', 'Total', 'Late', 'First gift', 'Last gift'].join(',')]; for (const f of funders) out.push([f.name, P.dict.ctype[f.ctype], f.city, f.state, f.emp, f.occ, f.n, f.total.toFixed(2), f.late.toFixed(2), dstr(f.first), dstr(f.last)].map(q).join(',')); try { await navigator.clipboard.writeText(out.join('\n')); toast(`Copied ${fmtN(out.length - 1)} funders`); } catch (e) { toast('Clipboard blocked by the browser'); } });
+    // overlap with the campaign, by name key (address-independent)
+    ensureAlly(100663).then(K => {
+      const kd = K.det, kdict = K.dict; const kttRet = kdict.ttype.indexOf('Return Contribution'), kttCon = kdict.ttype.indexOf('Contribution');
+      const toCamp = new Map(); for (let i = 0; i < kd.tid.length; i++) { const t = kd.ttype[i]; if (t !== kttCon && t !== kttRet) continue; const nk = kdict.nkey[kd.nkey[i]]; toCamp.set(nk, (toCamp.get(nk) || 0) + kd.cents[i] / 100); }
+      const both = []; let bothPBG = 0, bothCamp = 0; const ctCand = P.dict.ctype.indexOf('Candidate / Candidate Committee');
+      for (const f of A.funders) { if (f.n <= 0 || f.ctype === ctCand) continue; const nk = P.dict.nkey[f.nkey]; const c = toCamp.get(nk); if (c == null || c <= 0) continue; both.push({ f, camp: c }); bothPBG += f.total; bothCamp += c; }
+      both.sort((a, b) => (b.f.total + b.camp) - (a.f.total + a.camp));
+      const el = $('#pbOverlap'); if (!el) return;
+      el.innerHTML = `<h3>Donors to both committees</h3><div class="note">${fmtN(both.length)} of ${fmtN(A.funders.filter(f => f.n > 0 && f.ctype !== ctCand).length)} Project Battleground funders also gave to ${esc(K.meta.committee)}: ${fmt$(bothPBG)} to the committee and ${fmt$(bothCamp)} to the campaign. Matching is by name, so a common name can over-match. Individuals who maxed out to the campaign and then gave more here are the clearest sign of the leadership committee absorbing demand the limits would otherwise cap.</div>
+      <div class="tw" style="max-height:480px"><table><thead><tr><th>Donor</th><th>Location</th><th>Employer / occupation</th><th class="num">To the campaign</th><th class="num">To Battleground</th><th class="num">Combined</th></tr></thead><tbody>${both.slice(0, 200).map(({ f, camp }) => `<tr class="row"><td><b>${esc(f.name)}</b></td><td>${esc(f.city)}${f.state ? ', ' + f.state : ''}</td><td class="small">${esc(f.emp)}${f.occ ? `<div class="muted">${esc(f.occ)}</div>` : ''}</td><td class="num" ${camp >= 8400 ? 'style="color:var(--crit)"' : ''}>${fmt$(camp)}${camp >= 8400 ? '<div class="small muted">at or above a limit</div>' : ''}</td><td class="num">${fmt$(f.total)}</td><td class="num"><b>${fmt$(f.total + camp)}</b></td></tr>`).join('')}</tbody></table></div><div class="small muted" style="margin-top:8px">Showing ${fmtN(Math.min(200, both.length))} of ${fmtN(both.length)}.</div>`;
+    }).catch(e => { const el = $('#pbOverlap'); if (el) el.innerHTML = `<h3>Donors to both committees</h3><div class="note">Could not load the campaign file to compute the overlap: ${esc(e.message)}</div>`; });
+  }).catch(e => { main.innerHTML = `<div class="loading">${esc(e.message)}</div>`; });
+}
+
 // ---------- routing ----------
 function render() {
   const main = $('#main');
-  const hideFilters = tab === 'field';
+  const hideFilters = tab === 'field' || tab === 'pbg';
   $('#filters').style.display = hideFilters ? 'none' : ''; $('#chips').style.display = hideFilters ? 'none' : ''; $('#copyCsv').style.visibility = (hideFilters || tab === 'spending') ? 'hidden' : '';
   if (tab === 'field') { renderField(main); return; }
+  if (tab === 'pbg') { renderBattleground(main); return; }
   if (D && CUR) { $('#title').textContent = D.meta.committee; $('#subtitle').textContent = D.meta._sub || ''; }
   if (tab === 'overview') renderOverview(main); else if (tab === 'donors') renderDonors(main); else if (tab === 'intel') renderIntel(main); else if (tab === 'contribs') renderContribs(main); else if (tab === 'spending') renderSpending(main); else if (tab === 'geo') renderGeo(main); else if (tab === 'work') renderWork(main); else renderReports(main);
 }
@@ -380,6 +509,6 @@ async function load(id) {
   if (state.q) apply();
 }
 // accept the new tab names in the hash
-(function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } })();
+(function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending|pbg)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } })();
 // if the base page already finished loading before this script arrived (cached data), re-render with the extended views
 if (typeof D !== 'undefined' && D && D.det) { extendSearch(); render(); }
