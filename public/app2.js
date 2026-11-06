@@ -509,6 +509,7 @@ function xcMatch(o, toks) { const hay = (o.name + ' ' + o.emp + ' ' + o.city + '
 function renderCrossSearch(main) {
   const q = (state.q || '').trim(); const pair = xcPair();
   if (tab === 'field' || q.length < 3 || pair.length < 2) return;
+  if (tab === 'donors' && COMBINED && CUR && cmbPairFor(CUR.id)) return;   // the combined ranking already spans both committees
   const seq = ++XC.seq; const box = document.createElement('div'); box.className = 'card xsearch'; box.id = 'xsearch';
   box.innerHTML = `<h3>Across the campaign and Project Battleground</h3><div class="note">Looking up “${esc(q)}” in both committees…</div>`;
   main.insertAdjacentElement('afterbegin', box);
@@ -528,6 +529,74 @@ function renderCrossSearch(main) {
     box.querySelectorAll('.xc-go').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const id = +a.dataset.id; const nm = a.dataset.q; $('#q').value = nm; state.q = nm.toLowerCase(); if (CUR && CUR.id === id) { apply(); return; } if (tab === 'pbg') { tab = 'donors'; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } loadCandidate(id); }));
   }).catch(e => { if (box.isConnected) box.innerHTML = `<h3>Across the campaign and Project Battleground</h3><div class="note">Could not load the other committee: ${esc(e.message)}</div>`; });
 }
+
+// ---------- combined donor ranking: campaign + leadership committee as one list ----------
+let COMBINED = true, cmbSort = { k: 'total', dir: -1 }, cmbPage = 0, cmbMin = 0, cmbSeq = 0;
+const cmbRecords = new Map();   // data object -> per-donor records
+function cmbKeyOf(dict, det, i) { return dict.nkey[det.nkey[i]] + '|' + (dict.state[det.state[i]] || ''); }   // name + state: stricter than name alone, tolerant of a second address
+function cmbRecordsOf(P) {
+  let m = cmbRecords.get(P); if (m) return m; m = new Map();
+  const det = P.det, dict = P.dict, con = dict.ttype.indexOf('Contribution'), ret = dict.ttype.indexOf('Return Contribution');
+  for (let i = 0; i < det.tid.length; i++) {
+    const t = det.ttype[i]; if (t !== con && t !== ret) continue; const k = cmbKeyOf(dict, det, i);
+    let o = m.get(k); if (!o) { o = { k, name: dict.name[det.name[i]], city: dict.city[det.city[i]], state: dict.state[det.state[i]], zip: dict.zip[det.zip[i]], emp: dict.emp[det.emp[i]], occ: dict.occ[det.occ[i]], total: 0, n: 0, first: 1e9, last: -1, dkey: dict.dkey ? dict.dkey[det.dkey[i]] : '' }; m.set(k, o); }
+    o.total += det.cents[i] / 100; if (t === con) { o.n++; if (det.day[i] > o.last) o.last = det.day[i]; if (det.day[i] < o.first) o.first = det.day[i]; }
+  }
+  cmbRecords.set(P, m); return m;
+}
+function cmbPairFor(id) { const pair = xcPair(); return pair.length === 2 && pair.includes(id) ? pair : null; }
+function cmbToggleHtml(on, pair) {
+  if (!pair) return '';
+  const names = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).committee || id);
+  return `<div class="segs" style="margin:0 0 12px"><button class="seg ${on ? 'on' : ''}" data-cmb="1">Combined: ${esc(names[0])} + ${esc(names[1])}</button><button class="seg ${!on ? 'on' : ''}" data-cmb="0">This committee only</button></div>`;
+}
+function bindCmbToggle(main) { main.querySelectorAll('[data-cmb]').forEach(b => b.addEventListener('click', () => { COMBINED = b.dataset.cmb === '1'; cmbPage = 0; render(); })); }
+function renderDonorsCombined(main) {
+  const pair = cmbPairFor(CUR.id); const seq = ++cmbSeq;
+  main.innerHTML = cmbToggleHtml(true, pair) + '<div class="loading">Combining both committees…</div>'; bindCmbToggle(main);
+  Promise.all(pair.map(xcData)).then(Ps => {
+    if (seq !== cmbSeq || tab !== 'donors' || !COMBINED) return;
+    const names = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).committee || String(id)); const short = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).short || String(id));
+    const maps = Ps.map(cmbRecordsOf); const q = (state.q || '').toLowerCase().split(/\s+/).filter(Boolean);
+    const all = new Map();
+    maps.forEach((m, ci) => { for (const [k, o] of m) { let r = all.get(k); if (!r) { r = { k, name: o.name, city: o.city, state: o.state, zip: o.zip, emp: o.emp, occ: o.occ, per: [0, 0], n: [0, 0], last: -1, first: 1e9, total: 0, gifts: 0 }; all.set(k, r); } r.per[ci] += o.total; r.n[ci] += o.n; r.total += o.total; r.gifts += o.n; if (o.last > r.last) r.last = o.last; if (o.first < r.first) r.first = o.first; if (!r.emp && o.emp) { r.emp = o.emp; r.occ = o.occ; } } });
+    let rows = [...all.values()].filter(r => r.gifts > 0 && r.total > 0);
+    // ranks on the full record, before search or minimum filters, so a donor's rank is stable
+    const byTotal = [...rows].sort((a, b) => b.total - a.total); byTotal.forEach((r, i) => r.rank = i + 1);
+    pair.forEach((id, ci) => { const solo = rows.filter(r => r.per[ci] > 0).sort((a, b) => b.per[ci] - a.per[ci]); solo.forEach((r, i) => { r['rank' + ci] = i + 1; }); });
+    const grand = rows.reduce((s, r) => s + r.total, 0); const both = rows.filter(r => r.per[0] > 0 && r.per[1] > 0).length;
+    const tiers = [[100000, '$100,000 and up'], [25000, '$25,000 to $99,999'], [8400, '$8,400 to $24,999'], [1000, '$1,000 to $8,399'], [0, 'Under $1,000']];
+    const tierRows = tiers.map(([min, label], i) => { const max = i === 0 ? Infinity : tiers[i - 1][0]; const t = rows.filter(r => r.total >= min && r.total < max); return { k: label, label, total: t.reduce((s, r) => s + r.total, 0), n: t.length }; });
+    if (q.length) rows = rows.filter(r => { const hay = (r.name + ' ' + r.emp + ' ' + r.occ + ' ' + r.city + ' ' + r.zip).toLowerCase(); return q.every(t => hay.includes(t)); });
+    if (cmbMin > 0) rows = rows.filter(r => r.total >= cmbMin);
+    const key = cmbSort.k; rows.sort((a, b) => { const va = key.startsWith('per') ? a.per[+key.slice(3)] : a[key], vb = key.startsWith('per') ? b.per[+key.slice(3)] : b[key]; if (typeof va === 'number') return (va - vb) * cmbSort.dir || a.rank - b.rank; return (String(va) < String(vb) ? -1 : String(va) > String(vb) ? 1 : 0) * cmbSort.dir; });
+    const PS = 50, pages = Math.max(1, Math.ceil(rows.length / PS)); cmbPage = Math.min(cmbPage, pages - 1); const page = rows.slice(cmbPage * PS, (cmbPage + 1) * PS);
+    const th = (k, l, num) => `<th class="${num ? 'num' : ''} ${cmbSort.k === k ? 'on' : ''}" data-k="${k}">${l}${cmbSort.k === k ? (cmbSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+    const top = n => byTotal.slice(0, n).reduce((s, r) => s + r.total, 0);
+    main.innerHTML = cmbToggleHtml(true, pair) + `
+    <div class="grid kpis">
+      <div class="tile"><div class="l">Donors across both committees</div><div class="v">${fmtN(byTotal.length)}</div><div class="d">${fmtN(both)} gave to both</div></div>
+      <div class="tile"><div class="l">Combined itemized giving</div><div class="v">${fmt$(grand)}</div><div class="d">${esc(short[0])} ${fmt$(byTotal.reduce((s, r) => s + r.per[0], 0))}, ${esc(short[1])} ${fmt$(byTotal.reduce((s, r) => s + r.per[1], 0))}</div></div>
+      <div class="tile"><div class="l">Top 100 donors</div><div class="v">${fmt$(top(100))}</div><div class="d">${pct(top(100), grand)} of combined dollars</div></div>
+      <div class="tile"><div class="l">$8,400 and up, combined</div><div class="v">${fmtN(byTotal.filter(r => r.total >= 8400).length)}</div><div class="d">donors whose combined total reaches the candidate limit</div></div>
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h3>Giving levels, combined</h3><div class="note">Donors by combined total across both committees. Use these bands for recognition tiers and invitation lists.</div>${hbars(tierRows)}</div>
+      <div class="card"><h3>How to read this list</h3><div class="note">Each row is one donor matched by name and state across ${esc(names[0])} and ${esc(names[1])}; itemized gifts net of refunds; transfers between the committees are excluded. <b>Rank</b> is the donor's place on the combined list over the full record; the two committee ranks show where the same donor sits on each committee alone, so a donor who is 300th to the campaign may be 150th once the committee is counted. Search above narrows the list without changing ranks. Gifts under $100 per election are not itemized by the Commission and cannot be matched to a name.</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><label class="small muted">Minimum combined total</label><input class="inline-in" id="cmbMin" type="number" value="${cmbMin || ''}" placeholder="0" style="width:110px"><button class="btn" id="cmbCsv">Copy combined ranking CSV</button></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Combined donor ranking</h3>
+      <div class="tw"><table><thead><tr>${th('rank', 'Rank', 1)}${th('name', 'Donor')}<th>Location</th><th>Employer / occupation</th>${th('per0', esc(short[0]), 1)}${th('rank0', 'Rank', 1)}${th('per1', esc(short[1]), 1)}${th('rank1', 'Rank', 1)}${th('total', 'Combined', 1)}${th('gifts', 'Gifts', 1)}${th('last', 'Last gift', 1)}</tr></thead><tbody>
+      ${page.map(r => `<tr class="row"><td class="num"><b>${r.rank}</b></td><td><b>${esc(r.name)}</b></td><td>${esc(r.city)}${r.state ? ', ' + r.state : ''}</td><td class="small">${esc(r.emp)}${r.occ ? `<div class="muted">${esc(r.occ)}</div>` : ''}</td><td class="num">${r.per[0] ? fmt$(r.per[0]) : '<span class="muted">—</span>'}</td><td class="num muted">${r.rank0 || ''}</td><td class="num">${r.per[1] ? fmt$(r.per[1]) : '<span class="muted">—</span>'}</td><td class="num muted">${r.rank1 || ''}</td><td class="num"><b>${fmt$(r.total)}</b></td><td class="num">${fmtN(r.gifts)}</td><td class="num">${dayStr(r.last)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="pager"><button class="btn" id="cmbPrev" ${cmbPage === 0 ? 'disabled' : ''}>Previous</button><span class="small muted">Page ${cmbPage + 1} of ${pages}, ${fmtN(rows.length)} donors</span><button class="btn" id="cmbNext" ${cmbPage >= pages - 1 ? 'disabled' : ''}>Next</button></div></div>`;
+    bindCmbToggle(main);
+    main.querySelectorAll('th[data-k]').forEach(h => h.addEventListener('click', () => { const k = h.dataset.k; if (cmbSort.k === k) cmbSort.dir *= -1; else { cmbSort.k = k; cmbSort.dir = (k === 'name' || k.startsWith('rank')) ? 1 : -1; } cmbPage = 0; renderDonorsCombined(main); }));
+    const mi = $('#cmbMin'); if (mi) mi.addEventListener('change', () => { cmbMin = +mi.value || 0; cmbPage = 0; renderDonorsCombined(main); });
+    const pv = $('#cmbPrev'), nx = $('#cmbNext'); if (pv) pv.addEventListener('click', () => { cmbPage--; renderDonorsCombined(main); }); if (nx) nx.addEventListener('click', () => { cmbPage++; renderDonorsCombined(main); });
+    const csv = $('#cmbCsv'); if (csv) csv.addEventListener('click', async () => { const qv = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }; const out = [['Combined rank', 'Donor', 'City', 'State', 'ZIP', 'Employer', 'Occupation', names[0], names[0] + ' rank', names[1], names[1] + ' rank', 'Combined total', 'Gifts', 'First gift', 'Last gift'].join(',')]; for (const r of rows) out.push([r.rank, r.name, r.city, r.state, r.zip, r.emp, r.occ, r.per[0].toFixed(2), r.rank0 || '', r.per[1].toFixed(2), r.rank1 || '', r.total.toFixed(2), r.gifts, dayStr(r.first), dayStr(r.last)].map(qv).join(',')); try { await navigator.clipboard.writeText(out.join('\n')); toast(`Copied ${fmtN(rows.length)} donors`); } catch (e) { toast('Clipboard blocked by the browser'); } });
+  }).catch(e => { main.innerHTML = cmbToggleHtml(true, pair) + `<div class="loading">Could not load the second committee: ${esc(e.message)}</div>`; bindCmbToggle(main); });
+}
 // ---------- routing ----------
 function render() {
   const main = $('#main');
@@ -536,7 +605,7 @@ function render() {
   if (tab === 'field') { renderField(main); return; }
   if (tab === 'pbg') { renderBattleground(main); renderCrossSearch(main); return; }
   if (D && CUR) { $('#title').textContent = D.meta.committee; $('#subtitle').textContent = D.meta._sub || ''; }
-  if (tab === 'overview') renderOverview(main); else if (tab === 'donors') renderDonors(main); else if (tab === 'intel') renderIntel(main); else if (tab === 'contribs') renderContribs(main); else if (tab === 'spending') renderSpending(main); else if (tab === 'geo') renderGeo(main); else if (tab === 'work') renderWork(main); else renderReports(main);
+  if (tab === 'overview') renderOverview(main); else if (tab === 'donors') { if (COMBINED && cmbPairFor(CUR.id)) renderDonorsCombined(main); else { renderDonors(main); main.insertAdjacentHTML('afterbegin', cmbToggleHtml(false, cmbPairFor(CUR.id))); bindCmbToggle(main); } } else if (tab === 'intel') renderIntel(main); else if (tab === 'contribs') renderContribs(main); else if (tab === 'spending') renderSpending(main); else if (tab === 'geo') renderGeo(main); else if (tab === 'work') renderWork(main); else renderReports(main);
   renderCrossSearch(main);
 }
 // extend the search blob with county, metro and sector once a candidate loads
