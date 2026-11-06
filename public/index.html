@@ -217,7 +217,7 @@ let LIMIT=8400;const limitInput=()=>LIMIT;
 
 let FIELD=null,CUR=null;
 async function loadField(){
-  const r=await fetch('data/field.json');FIELD=await r.json();
+  const r=await fetch('data/field.json',{cache:'no-cache'});FIELD=await r.json();
   const sel=$('#cand');sel.innerHTML='';
   for(const c of FIELD.candidates){const o=document.createElement('option');o.value=c.id;o.textContent=`${c.cand} (${c.party}) — ${c.committee}`;sel.appendChild(o);}
   sel.addEventListener('change',()=>{if(tab==='field')tab='overview';loadCandidate(+sel.value);});
@@ -232,7 +232,7 @@ async function loadCandidate(id){
 }
 let BOUND=false;
 async function load(id){
-  const r=await fetch(`data/cand-${id}.json`);
+  const r=await fetch(`data/cand-${id}.json?v=${encodeURIComponent((FIELD&&FIELD.generated)||'')}`);
   const total=+r.headers.get('content-length')||8300000;
   const reader=r.body.getReader();const chunks=[];let got=0;
   while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);got+=value.length;$('#pbar').style.width=Math.min(100,100*got/total)+'%';}

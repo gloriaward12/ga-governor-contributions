@@ -214,7 +214,7 @@ function renderSpending(main) {
 
 // ---------- donor intelligence ----------
 let hrMin = 1000, hrSort = { k: 'total', dir: -1 }, crossAll = false, intelView = 'headroom';
-async function ensureCross() { if (CROSS) return CROSS; const r = await fetch('data/cross.json'); CROSS = await r.json(); return CROSS; }
+async function ensureCross() { if (CROSS) return CROSS; const r = await fetch(`data/cross.json?v=${encodeURIComponent(FIELD.generated || '')}`); CROSS = await r.json(); return CROSS; }
 function renderIntel(main) {
   const ds = donorAgg(); const det = D.det;
   const people = ds.filter(d => d.n > 0 && DICT.ctype[d.ctype] !== 'Non-Candidate Committee' && DICT.ctype[d.ctype] !== 'Candidate / Candidate Committee');
@@ -370,7 +370,7 @@ function render() {
 }
 // extend the search blob with county, metro and sector once a candidate loads
 function extendSearch() {
-  if (!D || D._searchExtended) return; D._searchExtended = true;
+  if (!D || D._searchExtended || !D.det.county) return; D._searchExtended = true;
   const det = D.det; const co = DICT.county, me = DICT.metro, se = DICT.sector;
   for (let i = 0; i < N; i++) D.search[i] += '|' + (co[det.county[i]] + '|' + me[det.metro[i]] + '|' + se[det.sector[i]]).toLowerCase();
 }
