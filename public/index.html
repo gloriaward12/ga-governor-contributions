@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Georgia Governor 2026 — Contribution Explorer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%238b1a2b%27/%3E%3Crect x=%277%27 y=%2716%27 width=%274%27 height=%279%27 fill=%27white%27/%3E%3Crect x=%2714%27 y=%2710%27 width=%274%27 height=%2715%27 fill=%27white%27/%3E%3Crect x=%2721%27 y=%276%27 width=%274%27 height=%2719%27 fill=%27white%27/%3E%3C/svg%3E">
+<style>
+:root{
+  color-scheme:light;
+  --plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;
+  --seq100:#cde2fb;--seq250:#86b6ef;--seq400:#3987e5;--seq500:#256abf;--seq600:#184f95;--seq700:#0d366b;
+  --good:#006300;--crit:#d03b3b;--accent:#8b1a2b;
+  --radius:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme:dark;--plane:#0d0d0d;--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;
+    --good:#0ca30c;--accent:#e8a0ab;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--plane);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+.hd{display:flex;align-items:center;gap:14px;padding:12px 18px;flex-wrap:wrap}
+.hd h1{font-size:17px;margin:0;font-weight:650;letter-spacing:-.01em}
+.hd .sub{color:var(--ink2);font-size:12.5px}
+.tabs{display:flex;gap:2px;padding:0 12px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 12px;color:var(--ink2);cursor:pointer;white-space:nowrap;border-radius:0}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);align-items:end}
+.f{display:flex;flex-direction:column;gap:3px}
+.f label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.f input,.f select{background:var(--plane);border:1px solid var(--border);border-radius:7px;padding:6px 8px;min-width:120px;height:32px}
+.f input[type=number]{width:110px;min-width:0}
+.f input[type=date]{min-width:0;width:140px}
+.f.search input{min-width:240px}
+.btn{background:var(--plane);border:1px solid var(--border);border-radius:7px;padding:6px 10px;height:32px;cursor:pointer;color:var(--ink2)}
+.btn:hover{color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:6px 18px 0;font-size:12px;color:var(--ink2)}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:2px 9px}
+.chip b{color:var(--ink)}
+main{padding:14px 18px 60px;max-width:1500px;margin:0 auto}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.tile .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.tile .v{font-size:24px;font-weight:650;letter-spacing:-.02em;margin-top:2px}
+.tile .d{font-size:12px;color:var(--ink2);margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;min-width:0}
+.card h3{margin:0 0 2px;font-size:14px;font-weight:650}
+.card .note{color:var(--muted);font-size:12px;margin-bottom:8px}
+.two{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.three{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+svg text{fill:var(--ink2);font-size:11px}
+svg .grid line{stroke:var(--grid)}
+svg .axis{stroke:var(--axis)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:4px 0 6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tt{position:fixed;pointer-events:none;background:var(--ink);color:var(--plane);padding:6px 9px;border-radius:6px;font-size:12px;z-index:50;display:none;max-width:280px;line-height:1.35}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
+th{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+th.on{color:var(--ink)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.row:hover td{background:color-mix(in srgb,var(--s1) 7%,transparent)}
+tr.click{cursor:pointer}
+.tw{overflow:auto;max-height:70vh;border:1px solid var(--grid);border-radius:8px}
+.bar{height:8px;border-radius:4px;background:var(--seq400);display:inline-block;vertical-align:middle}
+.hbars .r{display:grid;grid-template-columns:minmax(90px,170px) 1fr 90px;gap:10px;align-items:center;padding:4px 0;font-size:13px}
+.hbars .r .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
+.hbars .r .trk{height:14px;background:transparent;position:relative}
+.hbars .r .trk i{position:absolute;left:0;top:0;height:100%;background:var(--seq400);border-radius:0 4px 4px 0;min-width:2px}
+.hbars .r .val{text-align:right;font-variant-numeric:tabular-nums}
+.hbars .r:hover .trk i{background:var(--seq600)}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;color:var(--ink2);font-size:12.5px;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--border);color:var(--ink2);margin-left:4px}
+.pill.pri{border-color:var(--s1);color:var(--s1)}
+.pill.gen{border-color:var(--s2);color:var(--s2)}
+.pill.ret{border-color:var(--crit);color:var(--crit)}
+.drawer{position:fixed;top:0;right:0;width:min(560px,100%);height:100%;background:var(--surface);border-left:1px solid var(--border);box-shadow:-10px 0 30px rgba(0,0,0,.15);z-index:40;transform:translateX(100%);transition:transform .2s;overflow:auto;padding:18px}
+.drawer.open{transform:none}
+.drawer h2{margin:0 0 4px;font-size:18px}
+.drawer .x{position:absolute;top:10px;right:12px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13px;margin:10px 0}
+.kv div:nth-child(odd){color:var(--muted)}
+.loading{padding:60px;text-align:center;color:var(--ink2)}
+.prog{height:6px;background:var(--grid);border-radius:3px;max-width:360px;margin:12px auto;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--s1);width:0;transition:width .2s}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--plane);padding:8px 14px;border-radius:8px;font-size:13px;display:none;z-index:60}
+.inline-in{width:90px;background:var(--plane);border:1px solid var(--border);border-radius:6px;padding:3px 6px;height:26px}
+.src{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.5}
+@media (max-width:700px){.f.search input{min-width:160px}.hbars .r{grid-template-columns:minmax(80px,120px) 1fr 80px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd">
+    <div>
+      <h1 id="title">Georgia Governor 2026 — Contribution Explorer</h1>
+      <div class="sub" id="subtitle">Loading…</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="cand" class="btn" style="max-width:320px;font-weight:600;color:var(--ink)" title="Choose a candidate committee"></select>
+      <button class="btn" id="copyCsv" title="Copy the currently filtered contributions as CSV">Copy filtered CSV</button>
+      <button class="btn" id="reset">Clear filters</button>
+    </div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="donors">Top donors</button>
+    <button role="tab" data-tab="contribs">Contributions</button>
+    <button role="tab" data-tab="geo">Geography</button>
+    <button role="tab" data-tab="work">Employers &amp; occupations</button>
+    <button role="tab" data-tab="reports">Reports, returns &amp; loans</button>
+    <button role="tab" data-tab="field" style="margin-left:auto;color:var(--accent)">⇄ Compare the field</button>
+  </div>
+  <div class="filters" id="filters">
+    <div class="f search"><label>Search donor / employer / occupation / city / zip</label><input id="q" placeholder="e.g. Emory, Attorney, 30309, Smith"></div>
+    <div class="f"><label>From</label><input type="date" id="from"></div>
+    <div class="f"><label>To</label><input type="date" id="to"></div>
+    <div class="f"><label>Election</label><select id="etype"><option value="">All</option></select></div>
+    <div class="f"><label>Contribution kind</label><select id="kind"><option value="">All kinds</option><option value="item">Itemized</option><option value="unit">Unitemized (small-dollar)</option><option value="inkind">In-kind</option><option value="ret">Returned / refunds</option></select></div>
+    <div class="f"><label>Contributor type</label><select id="ctype"><option value="">All</option></select></div>
+    <div class="f"><label>State</label><select id="state"><option value="">All</option><option value="__GA">Georgia only</option><option value="__OUT">Out of state</option></select></div>
+    <div class="f"><label>Amount min</label><input type="number" id="amin" placeholder="0"></div>
+    <div class="f"><label>Amount max</label><input type="number" id="amax" placeholder="any"></div>
+    <div class="f"><label>Report</label><select id="report"><option value="">All reports</option></select></div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+<main id="main"><div class="loading">Loading 260k contributions…<div class="prog"><i id="pbar"></i></div><div class="small muted" id="ptext"></div></div></main>
+<div class="tt" id="tt"></div>
+<div class="drawer" id="drawer"><button class="btn x" id="dclose">Close</button><div id="dbody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const fmt$=n=>(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:0});
+const fmt$2=n=>(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN=n=>n.toLocaleString('en-US');
+const fmtK=n=>{const a=Math.abs(n);const s=n<0?'-':'';return a>=1e6?s+'$'+(a/1e6).toFixed(a>=1e7?0:1)+'M':a>=1e3?s+'$'+(a/1e3).toFixed(0)+'K':s+'$'+a.toFixed(0)};
+const fmtKn=n=>{const a=Math.abs(n);return a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e3?(a/1e3).toFixed(0)+'K':String(a)};
+const pct=(a,b)=>b?((100*a/b).toFixed(1)+'%'):'—';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D, DICT, EPOCH, N, UN;
+let tab='overview';
+const state={q:'',from:null,to:null,etype:'',kind:'',ctype:'',state:'',amin:null,amax:null,report:''};
+const dayToDate=d=>{const t=new Date(EPOCH.getTime()+d*86400000);return t};
+const dayStr=d=>{const t=dayToDate(d);return (t.getUTCMonth()+1).toString().padStart(2,'0')+'/'+t.getUTCDate().toString().padStart(2,'0')+'/'+t.getUTCFullYear()};
+const isoStr=d=>dayToDate(d).toISOString().slice(0,10);
+const monthKey=d=>{const t=dayToDate(d);return t.getUTCFullYear()*12+t.getUTCMonth()};
+const monthLabel=k=>{const y=Math.floor(k/12),m=k%12;return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]+" '"+String(y).slice(2)};
+const weekKey=d=>Math.floor((d+2)/7); // epoch 2025-01-01 is a Wednesday; +2 aligns weeks to Monday
+let LIMIT=8400;const limitInput=()=>LIMIT;
+
+let FIELD=null,CUR=null;
+async function loadField(){
+  const r=await fetch('data/field.json');FIELD=await r.json();
+  const sel=$('#cand');sel.innerHTML='';
+  for(const c of FIELD.candidates){const o=document.createElement('option');o.value=c.id;o.textContent=`${c.cand} (${c.party}) — ${c.committee}`;sel.appendChild(o);}
+  sel.addEventListener('change',()=>{if(tab==='field')tab='overview';loadCandidate(+sel.value);});
+  const h=(location.hash||'').slice(1);const m=h.match(/^cand-(\d+)/);
+  let start=m?+m[1]:(FIELD.candidates.some(c=>c.id===100663)?100663:FIELD.candidates[0].id);if(!FIELD.candidates.some(c=>c.id===start))start=FIELD.candidates[0].id;
+  sel.value=start;await loadCandidate(start);
+}
+async function loadCandidate(id){
+  CUR=FIELD.candidates.find(c=>c.id===id);$('#cand').value=id;
+  $('#main').innerHTML=`<div class="loading">Loading ${esc(CUR.committee)} — ${fmtN(CUR.rows)} transactions…<div class="prog"><i id="pbar"></i></div><div class="small muted" id="ptext"></div></div>`;
+  try{await load(id);}catch(e){$('#main').innerHTML=`<div class="loading">Could not load the data: ${esc(e.message)}</div>`;}
+}
+let BOUND=false;
+async function load(id){
+  const r=await fetch(`data/cand-${id}.json`);
+  const total=+r.headers.get('content-length')||8300000;
+  const reader=r.body.getReader();const chunks=[];let got=0;
+  while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);got+=value.length;$('#pbar').style.width=Math.min(100,100*got/total)+'%';}
+  const text=await new Blob(chunks).text();
+  $('#ptext').textContent='Indexing…';
+  D=JSON.parse(text);DICT=D.dict;EPOCH=new Date(D.meta.epoch+'T00:00:00Z');
+  N=D.det.tid.length;UN=D.unit.day.length;
+  // typed arrays for speed
+  for(const k of Object.keys(D.det)) D.det[k]=(k==='cents')?Float64Array.from(D.det[k]):Int32Array.from(D.det[k]);
+  for(const k of Object.keys(D.unit)) D.unit[k]=(k==='cents')?Float64Array.from(D.unit[k]):Int32Array.from(D.unit[k]);
+  // lowercase search blob per detail row
+  D.search=new Array(N);
+  const nm=DICT.name,ci=DICT.city,zp=DICT.zip,oc=DICT.occ,em=DICT.emp,st=DICT.state;
+  for(let i=0;i<N;i++){D.search[i]=(nm[D.det.name[i]]+'|'+em[D.det.emp[i]]+'|'+oc[D.det.occ[i]]+'|'+ci[D.det.city[i]]+'|'+st[D.det.state[i]]+'|'+zp[D.det.zip[i]]).toLowerCase();}
+  // code lookups
+  D.subIdx={};DICT.sub.forEach((s,i)=>D.subIdx[s]=i);
+  D.ttIdx={};DICT.ttype.forEach((s,i)=>D.ttIdx[s]=i);
+  D.gaIdx=DICT.state.indexOf('GA');
+  // populate selects
+  const fill=(sel,arr,skipBlank=true)=>{arr.forEach((v,i)=>{if(skipBlank&&!v)return;const o=document.createElement('option');o.value=i;o.textContent=v;sel.appendChild(o);});};
+  const states=DICT.state.map((s,i)=>[s,i]).filter(x=>x[0]).sort((a,b)=>a[0]<b[0]?-1:1);
+  // date bounds
+  let mn=1e9,mx=-1e9;for(let i=0;i<N;i++){const d=D.det.day[i];if(d<mn)mn=d;if(d>mx)mx=d;}for(let i=0;i<UN;i++){const d=D.unit.day[i];if(d<mn)mn=d;if(d>mx)mx=d;}
+  D.minDay=mn;D.maxDay=mx;
+  $('#from').min=isoStr(mn);$('#from').max=isoStr(mx);$('#to').min=isoStr(mn);$('#to').max=isoStr(mx);
+  $('#title').textContent=`${D.meta.committee} — Contribution Explorer`;
+  $('#subtitle').textContent=`${D.meta.candidate} (${D.meta.party}) · Governor 2026 · ${fmtN(N+UN)} transactions from ${dayStr(mn)} to ${dayStr(mx)} · source: Georgia Campaign Finance Commission (PeachFile), extracted ${D.meta.extractedAsOf}${D.meta.apiRowsAdded?` + ${D.meta.apiRowsAdded} live filings through ${D.meta.apiPulledAt}`:''}`;
+  // reset select options (dictionaries differ per candidate)
+  for(const id2 of ['etype','ctype','report','state']){const s=$('#'+id2);const keep=[...s.options].filter(o=>o.value===''||o.value.startsWith('__'));s.innerHTML='';keep.forEach(o=>s.appendChild(o));}
+  fill($('#etype'),DICT.etype);fill($('#ctype'),DICT.ctype);fill($('#report'),DICT.report);
+  states.forEach(([s,i])=>{const o=document.createElement('option');o.value=i;o.textContent=s;$('#state').appendChild(o);});
+  if(!BOUND){bind();BOUND=true;}
+  // reset filter state for the new candidate
+  for(const k in state)state[k]=(k==='q'||k==='etype'||k==='kind'||k==='ctype'||k==='state'||k==='report')?'':null;$('#q').value='';$('#from').value='';$('#to').value='';$('#amin').value='';$('#amax').value='';for(const id2 of ['etype','kind','ctype','state','report'])$('#'+id2).value='';
+  donorPage=0;cPage=0;
+  [...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===tab));
+  apply();
+}
+
+function bind(){
+  $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.tab;[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x===b));try{location.hash=tab==='field'?'field':`cand-${CUR.id}-${tab}`}catch(_){}render();});
+  const h=(location.hash||'').slice(1);const hm=h.match(/^(?:cand-\d+-)?(overview|donors|contribs|geo|work|reports|field)$/);if(hm){tab=hm[1];[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===tab));}
+  let t;const deb=f=>{clearTimeout(t);t=setTimeout(f,180)};
+  $('#q').addEventListener('input',()=>deb(()=>{state.q=$('#q').value.trim().toLowerCase();apply();}));
+  $('#from').addEventListener('change',()=>{state.from=$('#from').value?Math.round((new Date($('#from').value+'T00:00:00Z')-EPOCH)/86400000):null;apply();});
+  $('#to').addEventListener('change',()=>{state.to=$('#to').value?Math.round((new Date($('#to').value+'T00:00:00Z')-EPOCH)/86400000):null;apply();});
+  for(const id of ['etype','kind','ctype','state','report']) $('#'+id).addEventListener('change',()=>{state[id]=$('#'+id).value;apply();});
+  $('#amin').addEventListener('input',()=>deb(()=>{state.amin=$('#amin').value===''?null:+$('#amin').value;apply();}));
+  $('#amax').addEventListener('input',()=>deb(()=>{state.amax=$('#amax').value===''?null:+$('#amax').value;apply();}));
+  $('#reset').addEventListener('click',()=>{for(const k in state)state[k]=(k==='q'||k==='etype'||k==='kind'||k==='ctype'||k==='state'||k==='report')?'':null;$('#q').value='';$('#from').value='';$('#to').value='';$('#amin').value='';$('#amax').value='';for(const id of ['etype','kind','ctype','state','report'])$('#'+id).value='';apply();});
+  $('#dclose').addEventListener('click',()=>$('#drawer').classList.remove('open'));
+  $('#copyCsv').addEventListener('click',copyCsv);
+  document.addEventListener('mousemove',e=>{const tt=$('#tt');if(tt.style.display==='block'){tt.style.left=Math.min(window.innerWidth-300,e.clientX+14)+'px';tt.style.top=(e.clientY+14)+'px';}});
+}
+function showTT(html){const tt=$('#tt');tt.innerHTML=html;tt.style.display='block';}
+function hideTT(){$('#tt').style.display='none';}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2200);}
+
+// ---------- filtering ----------
+let SEL=[],USEL=[];// selected detail indices, unit indices
+function apply(){
+  const s=state;const det=D.det,un=D.unit;
+  const subItem=D.subIdx['Itemized Contribution'],subIn=D.subIdx['In-Kind Contribution'];
+  const ttRet=D.ttIdx['Return Contribution'],ttCon=D.ttIdx['Contribution'];
+  const sIdx=s.state&&!s.state.startsWith('__')?+s.state:null;
+  SEL=[];USEL=[];
+  const unitAllowed=!s.q&&!s.ctype&&!s.state&&(s.kind===''||s.kind==='unit'||s.kind==='ret');
+  for(let i=0;i<N;i++){
+    const tt=det.ttype[i],sub=det.sub[i];
+    if(s.kind==='item'&&!(sub===subItem&&tt===ttCon))continue;
+    if(s.kind==='inkind'&&sub!==subIn)continue;
+    if(s.kind==='ret'&&tt!==ttRet)continue;
+    if(s.kind==='unit')continue;
+    if(s.kind===''&&tt!==ttCon&&tt!==ttRet)continue; // loans shown only on Reports tab
+    const d=det.day[i];if(s.from!==null&&d<s.from)continue;if(s.to!==null&&d>s.to)continue;
+    if(s.etype&&det.etype[i]!==+s.etype)continue;
+    if(s.ctype&&det.ctype[i]!==+s.ctype)continue;
+    if(s.report&&det.report[i]!==+s.report)continue;
+    if(sIdx!==null&&det.state[i]!==sIdx)continue;
+    if(s.state==='__GA'&&det.state[i]!==D.gaIdx)continue;
+    if(s.state==='__OUT'&&(det.state[i]===D.gaIdx||det.state[i]===0))continue;
+    const a=det.cents[i]/100;if(s.amin!==null&&Math.abs(a)<s.amin)continue;if(s.amax!==null&&Math.abs(a)>s.amax)continue;
+    if(s.q&&!D.search[i].includes(s.q))continue;
+    SEL.push(i);
+  }
+  if(unitAllowed){
+    for(let i=0;i<UN;i++){
+      const tt=un.ttype[i];
+      if(s.kind==='ret'&&tt!==ttRet)continue;
+      if(s.kind==='unit'&&tt!==ttCon)continue;
+      const d=un.day[i];if(s.from!==null&&d<s.from)continue;if(s.to!==null&&d>s.to)continue;
+      if(s.etype&&un.etype[i]!==+s.etype)continue;
+      if(s.report&&un.report[i]!==+s.report)continue;
+      const a=un.cents[i]/100;if(s.amin!==null&&Math.abs(a)<s.amin)continue;if(s.amax!==null&&Math.abs(a)>s.amax)continue;
+      USEL.push(i);
+    }
+  }
+  chips(unitAllowed);render();
+}
+function chips(unitAllowed){
+  const c=[];const s=state;
+  if(s.q)c.push(`search <b>${esc(s.q)}</b>`);if(s.from!==null)c.push(`from <b>${dayStr(s.from)}</b>`);if(s.to!==null)c.push(`to <b>${dayStr(s.to)}</b>`);
+  if(s.etype)c.push(`election <b>${esc(DICT.etype[+s.etype])}</b>`);if(s.kind)c.push(`kind <b>${$('#kind').selectedOptions[0].textContent}</b>`);
+  if(s.ctype)c.push(`contributor <b>${esc(DICT.ctype[+s.ctype])}</b>`);if(s.state)c.push(`state <b>${s.state==='__GA'?'Georgia':s.state==='__OUT'?'Out of state':DICT.state[+s.state]}</b>`);
+  if(s.amin!==null)c.push(`min <b>${fmt$(s.amin)}</b>`);if(s.amax!==null)c.push(`max <b>${fmt$(s.amax)}</b>`);if(s.report)c.push(`report <b>${esc(DICT.report[+s.report])}</b>`);
+  let html=c.map(x=>`<span class="chip">${x}</span>`).join('');
+  html+=`<span class="chip">${fmtN(SEL.length+USEL.length)} transactions match</span>`;
+  if(!unitAllowed)html+=`<span class="chip muted" title="Unitemized contributions carry no donor name, type or address, so they drop out when you filter by those">unitemized excluded by this filter</span>`;
+  $('#chips').innerHTML=html;
+}
+
+// ---------- aggregates ----------
+function totals(){
+  const det=D.det,un=D.unit;const ttRet=D.ttIdx['Return Contribution'];const subIn=D.subIdx['In-Kind Contribution'];
+  let gross=0,ret=0,inkind=0,itemSum=0,itemN=0,unitSum=0,unitN=0,retN=0,inkN=0;
+  const amounts=[];
+  for(const i of SEL){const a=det.cents[i]/100;if(det.ttype[i]===ttRet){ret+=a;retN++;}else if(det.sub[i]===subIn){inkind+=a;inkN++;gross+=a;amounts.push(a);}else{itemSum+=a;itemN++;gross+=a;amounts.push(a);}}
+  for(const i of USEL){const a=un.cents[i]/100;if(un.ttype[i]===ttRet){ret+=a;retN++;}else{unitSum+=a;unitN++;gross+=a;amounts.push(a);}}
+  amounts.sort((a,b)=>a-b);
+  const med=amounts.length?amounts[Math.floor(amounts.length/2)]:0;
+  const n=amounts.length;
+  let small=0,smallN=0;for(const a of amounts){if(a<200){small+=a;smallN++;}}
+  // unique donors (detail only)
+  const dk=new Set();for(const i of SEL){if(det.ttype[i]!==ttRet)dk.add(det.dkey[i]);}
+  return {gross,net:gross+ret,ret,retN,inkind,inkN,itemSum,itemN,unitSum,unitN,n,avg:n?gross/n:0,med,small,smallN,donors:dk.size};
+}
+function donorAgg(){
+  const det=D.det;const ttRet=D.ttIdx['Return Contribution'];const m=new Map();
+  const pri=DICT.etype.indexOf('Primary'),gen=DICT.etype.indexOf('General');
+  for(const i of SEL){
+    const k=det.dkey[i];let o=m.get(k);
+    if(!o){o={k,name:det.name[i],city:det.city[i],state:det.state[i],zip:det.zip[i],occ:det.occ[i],emp:det.emp[i],ctype:det.ctype[i],n:0,total:0,ret:0,max:0,first:1e9,last:-1,pri:0,gen:0,other:0,rows:[]};m.set(k,o);}
+    const a=det.cents[i]/100;o.rows.push(i);
+    if(det.ttype[i]===ttRet){o.ret+=a;o.total+=a;}
+    else{o.n++;o.total+=a;if(a>o.max)o.max=a;const e=det.etype[i];if(e===pri)o.pri+=a;else if(e===gen)o.gen+=a;else o.other+=a;}
+    const d=det.day[i];if(d<o.first)o.first=d;if(d>o.last){o.last=d;if(det.occ[i])o.occ=det.occ[i];if(det.emp[i])o.emp=det.emp[i];}
+  }
+  return [...m.values()];
+}
+function groupBy(keyFn,labelFn,src='det'){
+  const m=new Map();const det=D.det;const ttRet=D.ttIdx['Return Contribution'];
+  for(const i of SEL){if(det.ttype[i]===ttRet)continue;const k=keyFn(i);let o=m.get(k);if(!o){o={k,label:labelFn(k),n:0,total:0,donors:new Set()};m.set(k,o);}o.n++;o.total+=det.cents[i]/100;o.donors.add(det.dkey[i]);}
+  return [...m.values()].map(o=>({...o,donors:o.donors.size})).sort((a,b)=>b.total-a.total);
+}
+
+// ---------- charts (SVG) ----------
+function barsChart(el,series,cats,opts={}){
+  // series: [{name,color,values:[]}] stacked; cats: labels
+  const W=el.clientWidth||800,H=opts.h||260,m={t:14,r:12,b:34,l:54};
+  const iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const tot=cats.map((_,i)=>series.reduce((s,sr)=>s+sr.values[i],0));
+  const max=Math.max(1,...tot);
+  const step=niceStep(max/4);const ymax=Math.ceil(max/step)*step;
+  const y=v=>m.t+ih-(v/ymax)*ih;
+  const bw=iw/cats.length;const pad=Math.min(6,bw*0.25);
+  let g=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><g class="grid">`;
+  for(let v=0;v<=ymax;v+=step){g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l-6}" y="${y(v)+4}" text-anchor="end">${opts.fmt?fmtKn(v):fmtK(v)}</text>`;}
+  g+=`</g><line class="axis" x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+  cats.forEach((c,i)=>{let acc=0;const x=m.l+i*bw+pad/2;
+    series.forEach((sr,si)=>{const v=sr.values[i];if(!v)return;const y1=y(acc+v),y0=y(acc);const h=Math.max(0,y0-y1-(si>0?2:0));
+      g+=`<rect x="${x}" y="${y1}" width="${Math.max(1,bw-pad)}" height="${h}" fill="${sr.color}" rx="${si===series.length-1?3:0}" data-i="${i}" data-s="${si}"/>`;acc+=v;});
+    const every=Math.max(1,Math.ceil(44/bw));if(i%every===0||(cats.length<=8))g+=`<text x="${x+(bw-pad)/2}" y="${H-10}" text-anchor="middle">${c}</text>`;
+    g+=`<rect class="hit" x="${m.l+i*bw}" y="${m.t}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`;
+  });
+  g+='</svg>';el.innerHTML=g;
+  el.querySelectorAll('rect.hit').forEach(r=>{r.addEventListener('mouseenter',()=>{const i=+r.dataset.i;showTT(`<b>${esc(cats[i])}</b><br>`+series.map(sr=>`${esc(sr.name)}: ${opts.fmt?opts.fmt(sr.values[i]):fmt$(sr.values[i])}`).join('<br>')+(series.length>1?`<br>Total: ${opts.fmt?opts.fmt(tot[i]):fmt$(tot[i])}`:'')+(opts.extra?'<br>'+opts.extra(i):''));});r.addEventListener('mouseleave',hideTT);});
+}
+function lineChart(el,xs,ys,opts={}){
+  const W=el.clientWidth||800,H=opts.h||220,m={t:14,r:12,b:30,l:60};const iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const max=Math.max(1,...ys);const step=niceStep(max/4);const ymax=Math.ceil(max/step)*step;
+  const y=v=>m.t+ih-(v/ymax)*ih;const x=i=>m.l+(xs.length>1?i/(xs.length-1):0)*iw;
+  let g=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><g class="grid">`;
+  for(let v=0;v<=ymax;v+=step)g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
+  g+='</g>';
+  const pts=ys.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+  g+=`<polyline points="${pts}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>`;
+  g+=`<polygon points="${m.l},${y(0)} ${pts} ${x(xs.length-1)},${y(0)}" fill="var(--s1)" opacity=".08"/>`;
+  const lab=Math.max(1,Math.floor(xs.length/8));xs.forEach((d,i)=>{if(i%lab===0||i===xs.length-1)g+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${d}</text>`;});
+  g+=`<line id="ch" class="axis" y1="${m.t}" y2="${m.t+ih}" x1="-10" x2="-10"/><circle id="cdot" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2" cx="-10" cy="-10"/>`;
+  g+=`<rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" class="hit"/></svg>`;
+  el.innerHTML=g;const svg=el.querySelector('svg'),ch=svg.querySelector('#ch'),dot=svg.querySelector('#cdot');
+  svg.querySelector('.hit').addEventListener('mousemove',e=>{const r=svg.getBoundingClientRect();const px=e.clientX-r.left;const i=Math.max(0,Math.min(xs.length-1,Math.round((px-m.l)/iw*(xs.length-1))));ch.setAttribute('x1',x(i));ch.setAttribute('x2',x(i));dot.setAttribute('cx',x(i));dot.setAttribute('cy',y(ys[i]));showTT(`<b>${esc(opts.tipLabel?opts.tipLabel(i):xs[i])}</b><br>${opts.name||''} ${fmt$(ys[i])}`);});
+  svg.querySelector('.hit').addEventListener('mouseleave',()=>{hideTT();ch.setAttribute('x1',-10);ch.setAttribute('x2',-10);dot.setAttribute('cx',-10);});
+}
+function niceStep(r){const p=Math.pow(10,Math.floor(Math.log10(Math.max(1,r))));const f=r/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p;}
+function hbars(rows,opts={}){
+  const max=Math.max(1,...rows.map(r=>r.total));
+  return `<div class="hbars">${rows.map(r=>`<div class="r" ${opts.click?`data-k="${esc(r.k)}" style="cursor:pointer"`:''} title="${esc(r.label)} · ${fmtN(r.n)} contributions${r.donors!==undefined?' · '+fmtN(r.donors)+' donors':''}"><div class="lab">${esc(r.label||'(blank)')}</div><div class="trk"><i style="width:${100*r.total/max}%"></i></div><div class="val">${opts.pct?r.total.toFixed(1)+'%':fmt$(r.total)}<span class="muted small"> · ${fmtN(r.n)}</span></div></div>`).join('')}</div>`;
+}
+
+// ---------- render ----------
+function render(){
+  const main=$('#main');
+  $('#filters').style.display=tab==='field'?'none':'';$('#chips').style.display=tab==='field'?'none':'';$('#copyCsv').style.visibility=tab==='field'?'hidden':'';
+  if(tab==='field'){renderField(main);return;}
+  if(tab==='overview')renderOverview(main);else if(tab==='donors')renderDonors(main);else if(tab==='contribs')renderContribs(main);else if(tab==='geo')renderGeo(main);else if(tab==='work')renderWork(main);else renderReports(main);
+}
+function renderOverview(main){
+  const T=totals();
+  const pri=DICT.etype.indexOf('Primary'),gen=DICT.etype.indexOf('General');
+  // monthly by election type
+  const det=D.det,un=D.unit,ttRet=D.ttIdx['Return Contribution'];
+  const mm=new Map();const add=(d,e,a,isUnit)=>{const k=monthKey(d);let o=mm.get(k);if(!o){o={pri:0,gen:0,oth:0,n:0,unitN:0,itemN:0};mm.set(k,o);}o.n++;if(isUnit)o.unitN++;else o.itemN++;if(e===pri)o.pri+=a;else if(e===gen)o.gen+=a;else o.oth+=a;};
+  for(const i of SEL){if(det.ttype[i]===ttRet)continue;add(det.day[i],det.etype[i],det.cents[i]/100,false);}
+  for(const i of USEL){if(un.ttype[i]===ttRet)continue;add(un.day[i],un.etype[i],un.cents[i]/100,true);}
+  const keys=[...mm.keys()].sort((a,b)=>a-b);
+  const kmin=keys[0],kmax=keys[keys.length-1];const cats=[],P=[],G=[],O=[],NN=[],UNN=[],INN=[];
+  for(let k=kmin;k<=kmax;k++){const o=mm.get(k)||{pri:0,gen:0,oth:0,n:0,unitN:0,itemN:0};cats.push(monthLabel(k));P.push(o.pri);G.push(o.gen);O.push(o.oth);NN.push(o.n);UNN.push(o.unitN);INN.push(o.itemN);}
+  // cumulative daily
+  const daily=new Map();for(const i of SEL){const a=det.cents[i]/100;daily.set(det.day[i],(daily.get(det.day[i])||0)+a);}for(const i of USEL){const a=un.cents[i]/100;daily.set(un.day[i],(daily.get(un.day[i])||0)+a);}
+  const days=[...daily.keys()].sort((a,b)=>a-b);const cum=[];let acc=0;const dl=[];for(const d of days){acc+=daily.get(d);cum.push(acc);dl.push(dayStr(d).slice(0,5)+'/'+dayStr(d).slice(8));}
+  // size buckets
+  const B=[[0,25,'< $25'],[25,100,'$25–99'],[100,250,'$100–249'],[250,1000,'$250–999'],[1000,2500,'$1,000–2,499'],[2500,limitInput(),`$2,500–${fmtN(limitInput()-1)}`],[limitInput(),1e12,`$${fmtN(limitInput())}+`]];
+  const bs=B.map(()=>({n:0,total:0}));const bucket=a=>{for(let i=0;i<B.length;i++)if(a>=B[i][0]&&a<B[i][1])return i;return B.length-1};
+  for(const i of SEL){if(det.ttype[i]===ttRet)continue;const a=det.cents[i]/100;const b=bucket(a);bs[b].n++;bs[b].total+=a;}
+  for(const i of USEL){if(un.ttype[i]===ttRet)continue;const a=un.cents[i]/100;const b=bucket(a);bs[b].n++;bs[b].total+=a;}
+  // GA share
+  let ga=0,out=0,unk=0;for(const i of SEL){if(det.ttype[i]===ttRet)continue;const a=det.cents[i]/100;const s=det.state[i];if(s===D.gaIdx)ga+=a;else if(s===0)unk+=a;else out+=a;}
+  const itemTotal=ga+out+unk;
+  main.innerHTML=`
+  <div class="grid kpis">
+    <div class="tile"><div class="l">Gross raised</div><div class="v">${fmt$(T.gross)}</div><div class="d">${fmtN(T.n)} contributions</div></div>
+    <div class="tile"><div class="l">Net of refunds</div><div class="v">${fmt$(T.net)}</div><div class="d">${fmt$(T.ret)} returned (${fmtN(T.retN)})</div></div>
+    <div class="tile"><div class="l">Itemized</div><div class="v">${fmt$(T.itemSum)}</div><div class="d">${fmtN(T.itemN)} gifts · ${pct(T.itemSum,T.gross)} of gross</div></div>
+    <div class="tile"><div class="l">Unitemized (small-dollar)</div><div class="v">${fmt$(T.unitSum)}</div><div class="d">${fmtN(T.unitN)} gifts · ${pct(T.unitSum,T.gross)} of gross</div></div>
+    <div class="tile"><div class="l">In-kind</div><div class="v">${fmt$(T.inkind)}</div><div class="d">${fmtN(T.inkN)} items</div></div>
+    <div class="tile"><div class="l">Named donors</div><div class="v">${fmtN(T.donors)}</div><div class="d">itemized, de-duplicated by name + ZIP</div></div>
+    <div class="tile"><div class="l">Average / median gift</div><div class="v">${fmt$2(T.avg)}</div><div class="d">median ${fmt$2(T.med)}</div></div>
+    <div class="tile"><div class="l">Gifts under $200</div><div class="v">${pct(T.smallN,T.n)}</div><div class="d">of count · ${pct(T.small,T.gross)} of dollars</div></div>
+    <div class="tile"><div class="l">Georgia share (itemized $)</div><div class="v">${pct(ga,itemTotal)}</div><div class="d">${fmt$(ga)} GA · ${fmt$(out)} out-of-state</div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Monthly receipts by election</h3><div class="note">Contributions received per month (refunds excluded). Hover for counts.</div>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Primary</span><span><i style="background:var(--s2)"></i>General</span>${O.some(v=>v)?'<span><i style="background:var(--s3)"></i>Runoff / other</span>':''}</div><div id="c1"></div></div>
+    <div class="card"><h3>Cumulative raised</h3><div class="note">Running total of all matching contributions, net of refunds, by transaction date.</div><div id="c2"></div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Gift size distribution</h3><div class="note">Count of contributions by size band. Per-election limit used for the top band: $<input class="inline-in" type="number" id="limit" value="${limitInput()}"> <span class="muted">(Georgia statewide limit — verify current cycle)</span></div><div id="c3"></div>
+      <table style="margin-top:8px"><tr><th>Band</th><th class="num">Gifts</th><th class="num">Dollars</th><th class="num">% of $</th></tr>${B.map((b,i)=>`<tr><td>${b[2]}</td><td class="num">${fmtN(bs[i].n)}</td><td class="num">${fmt$(bs[i].total)}</td><td class="num">${pct(bs[i].total,T.gross)}</td></tr>`).join('')}</table></div>
+    <div class="card"><h3>Monthly contribution count</h3><div class="note">Itemized vs. unitemized transactions per month — a read on small-dollar momentum.</div>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Itemized</span><span><i style="background:var(--s3)"></i>Unitemized</span></div><div id="c4"></div></div>
+  </div>
+  <div class="src">Sources: Georgia Government Transparency &amp; Campaign Finance Commission, PeachFile public bulk Contribution files (filing years 2025 and 2026, extracted ${D.meta.extractedAsOf}) merged with the PeachFile public search API for contributor occupation/employer${D.meta.apiRowsAdded?` and ${fmtN(D.meta.apiRowsAdded)} Two-Business-Day filings received after the extract`:''}. Unitemized contributions are reported without donor identity, so donor counts and geography cover itemized gifts only. Donor de-duplication is by normalized name + ZIP and may split a donor who used two addresses.</div>`;
+  const ser=[{name:'Primary',color:'var(--s1)',values:P},{name:'General',color:'var(--s2)',values:G}];if(O.some(v=>v))ser.push({name:'Runoff / other',color:'var(--s3)',values:O});
+  barsChart($('#c1'),ser,cats,{extra:i=>`${fmtN(NN[i])} contributions`});
+  if(days.length)lineChart($('#c2'),dl,cum,{name:'Cumulative',tipLabel:i=>dayStr(days[i])});
+  barsChart($('#c3'),[{name:'Gifts',color:'var(--seq500)',values:bs.map(b=>b.n)}],B.map(b=>b[2]),{fmt:fmtN,h:200});
+  barsChart($('#c4'),[{name:'Itemized',color:'var(--s1)',values:INN},{name:'Unitemized',color:'var(--s3)',values:UNN}],cats,{fmt:fmtN,h:220});
+  $('#limit').addEventListener('change',()=>{LIMIT=Math.max(1,+$('#limit').value||8400);render();});
+}
+
+let donorSort={k:'total',dir:-1},donorPage=0;
+function renderDonors(main){
+  const ds=donorAgg();const lim=limitInput();
+  const maxed=ds.filter(d=>d.pri>=lim||d.gen>=lim).length;
+  const topShare=(n)=>{const s=[...ds].sort((a,b)=>b.total-a.total).slice(0,n).reduce((x,d)=>x+d.total,0);return s;};
+  const all=ds.reduce((x,d)=>x+d.total,0);
+  const repeat=ds.filter(d=>d.n>1).length;
+  const key=donorSort.k;ds.sort((a,b)=>{let va=a[key],vb=b[key];if(typeof va==='number')return (va-vb)*donorSort.dir;va=key==='name'?DICT.name[a.name]:key==='emp'?DICT.emp[a.emp]:key==='occ'?DICT.occ[a.occ]:key==='city'?DICT.city[a.city]:'';vb=key==='name'?DICT.name[b.name]:key==='emp'?DICT.emp[b.emp]:key==='occ'?DICT.occ[b.occ]:key==='city'?DICT.city[b.city]:'';return (va<vb?-1:va>vb?1:0)*donorSort.dir;});
+  const PS=50;const pages=Math.max(1,Math.ceil(ds.length/PS));donorPage=Math.min(donorPage,pages-1);const page=ds.slice(donorPage*PS,(donorPage+1)*PS);
+  const th=(k,l,num)=>`<th class="${num?'num':''} ${donorSort.k===k?'on':''}" data-k="${k}">${l}${donorSort.k===k?(donorSort.dir<0?' ↓':' ↑'):''}</th>`;
+  main.innerHTML=`
+  <div class="grid kpis">
+    <div class="tile"><div class="l">Named donors</div><div class="v">${fmtN(ds.length)}</div><div class="d">matching current filters</div></div>
+    <div class="tile"><div class="l">Top 10 donors</div><div class="v">${fmt$(topShare(10))}</div><div class="d">${pct(topShare(10),all)} of itemized dollars</div></div>
+    <div class="tile"><div class="l">Top 100 donors</div><div class="v">${fmt$(topShare(100))}</div><div class="d">${pct(topShare(100),all)} of itemized dollars</div></div>
+    <div class="tile"><div class="l">Donors at/above limit</div><div class="v">${fmtN(maxed)}</div><div class="d">≥ $<input class="inline-in" type="number" id="limit" value="${lim}"> in primary or general</div></div>
+    <div class="tile"><div class="l">Repeat donors</div><div class="v">${fmtN(repeat)}</div><div class="d">${pct(repeat,ds.length)} gave more than once</div></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Donor leaderboard</h3><div class="note">Itemized contributions grouped by donor (name + ZIP). Click a column to sort, a row to see every transaction. Net = contributions minus refunds attributed to that donor.</div>
+  <div class="tw"><table><thead><tr>${th('name','Donor')}${th('city','City / state')}${th('emp','Employer')}${th('occ','Occupation')}${th('n','Gifts',1)}${th('total','Net total',1)}${th('pri','Primary',1)}${th('gen','General',1)}${th('other','Runoffs / other',1)}${th('max','Largest',1)}${th('last','Last gift',1)}</tr></thead><tbody>
+  ${page.map(d=>`<tr class="row click" data-k="${d.k}"><td><b>${esc(DICT.name[d.name])}</b>${d.ctype&&DICT.ctype[d.ctype]!=='Individual'?`<span class="pill">${esc(DICT.ctype[d.ctype].split(' /')[0])}</span>`:''}${(d.pri>=lim||d.gen>=lim)?'<span class="pill ret">at limit</span>':''}</td><td>${esc(DICT.city[d.city])}${DICT.state[d.state]?', '+DICT.state[d.state]:''}</td><td>${esc(DICT.emp[d.emp])}</td><td>${esc(DICT.occ[d.occ])}</td><td class="num">${fmtN(d.n)}</td><td class="num"><b>${fmt$(d.total)}</b>${d.ret?`<div class="small muted">${fmt$(d.ret)} refunded</div>`:''}</td><td class="num">${fmt$(d.pri)}</td><td class="num">${fmt$(d.gen)}</td><td class="num">${d.other?fmt$(d.other):''}</td><td class="num">${fmt$(d.max)}</td><td class="num">${d.last>=0?dayStr(d.last):''}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="pager"><span>Showing ${fmtN(donorPage*PS+1)}–${fmtN(Math.min(ds.length,(donorPage+1)*PS))} of ${fmtN(ds.length)} donors</span><span><button class="btn" id="pp" ${donorPage===0?'disabled':''}>‹ Prev</button> <button class="btn" id="pn" ${donorPage>=pages-1?'disabled':''}>Next ›</button></span></div></div>`;
+  main.querySelectorAll('th[data-k]').forEach(h=>h.addEventListener('click',()=>{const k=h.dataset.k;if(donorSort.k===k)donorSort.dir*=-1;else{donorSort.k=k;donorSort.dir=(k==='name'||k==='city'||k==='emp'||k==='occ')?1:-1;}donorPage=0;render();}));
+  main.querySelectorAll('tr.click').forEach(r=>r.addEventListener('click',()=>openDonor(r.dataset.k,ds)));
+  $('#pp').addEventListener('click',()=>{donorPage--;render();});$('#pn').addEventListener('click',()=>{donorPage++;render();});
+  $('#limit').addEventListener('change',()=>{LIMIT=Math.max(1,+$('#limit').value||8400);render();});
+}
+function openDonor(k,ds){
+  const d=ds.find(x=>x.k==k);if(!d)return;const det=D.det;
+  const rows=[...d.rows].sort((a,b)=>det.day[b]-det.day[a]);
+  $('#dbody').innerHTML=`<h2>${esc(DICT.name[d.name])}</h2><div class="muted small">${esc(DICT.ctype[d.ctype])}</div>
+  <div class="kv"><div>Location</div><div>${esc(DICT.addr[det.addr[rows[0]]])}${DICT.addr[det.addr[rows[0]]]?', ':''}${esc(DICT.city[d.city])}${DICT.state[d.state]?', '+DICT.state[d.state]:''} ${esc(DICT.zip[d.zip])}</div>
+  <div>Employer</div><div>${esc(DICT.emp[d.emp])||'—'}</div><div>Occupation</div><div>${esc(DICT.occ[d.occ])||'—'}</div>
+  <div>Net total</div><div><b>${fmt$2(d.total)}</b> across ${d.n} gift${d.n===1?'':'s'}${d.ret?` (${fmt$2(d.ret)} refunded)`:''}</div>
+  <div>Primary / General</div><div>${fmt$2(d.pri)} / ${fmt$2(d.gen)}${d.other?` / other ${fmt$2(d.other)}`:''}</div>
+  <div>First → last</div><div>${dayStr(d.first)} → ${dayStr(d.last)}</div></div>
+  <table><thead><tr><th>Date</th><th class="num">Amount</th><th>Election</th><th>Type</th><th>Report</th></tr></thead><tbody>
+  ${rows.map(i=>`<tr><td>${dayStr(det.day[i])}</td><td class="num">${fmt$2(det.cents[i]/100)}</td><td>${esc(DICT.etype[det.etype[i]])}</td><td>${esc(DICT.ttype[det.ttype[i]]==='Return Contribution'?'Refund':DICT.sub[det.sub[i]])}${DICT.desc[det.desc[i]]?`<div class="small muted">${esc(DICT.desc[det.desc[i]])}</div>`:''}</td><td class="small">${esc(DICT.report[det.report[i]])}</td></tr>`).join('')}
+  </tbody></table>`;
+  $('#drawer').classList.add('open');
+}
+
+let cSort={k:'day',dir:-1},cPage=0;
+function renderContribs(main){
+  const det=D.det,un=D.unit;
+  // build unified row list lazily: positive index = detail, negative = unit (-(i+1))
+  const rows=new Array(SEL.length+USEL.length);let p=0;for(const i of SEL)rows[p++]=i;for(const i of USEL)rows[p++]=-(i+1);
+  const g=(r,k)=>{if(r>=0){switch(k){case 'day':return det.day[r];case 'amt':return det.cents[r];case 'name':return DICT.name[det.name[r]];case 'state':return DICT.state[det.state[r]];case 'city':return DICT.city[det.city[r]];case 'emp':return DICT.emp[det.emp[r]];case 'etype':return DICT.etype[det.etype[r]];}}else{const i=-r-1;switch(k){case 'day':return un.day[i];case 'amt':return un.cents[i];case 'etype':return DICT.etype[un.etype[i]];default:return '';}}};
+  const k=cSort.k,dir=cSort.dir;
+  rows.sort((a,b)=>{const va=g(a,k),vb=g(b,k);if(typeof va==='number')return (va-vb)*dir||(g(b,'day')-g(a,'day'));return (va<vb?-1:va>vb?1:0)*dir||(g(b,'day')-g(a,'day'));});
+  const PS=100;const pages=Math.max(1,Math.ceil(rows.length/PS));cPage=Math.min(cPage,pages-1);const page=rows.slice(cPage*PS,(cPage+1)*PS);
+  const th=(key,l,num)=>`<th class="${num?'num':''} ${cSort.k===key?'on':''}" data-k="${key}">${l}${cSort.k===key?(cSort.dir<0?' ↓':' ↑'):''}</th>`;
+  const T=totals();
+  main.innerHTML=`<div class="card"><h3>All matching contributions</h3><div class="note">${fmtN(rows.length)} transactions · ${fmt$(T.gross)} gross · ${fmt$(T.net)} net of refunds. Unitemized gifts appear without donor details (that is how they are reported). Use "Copy filtered CSV" above to take this set into Excel or Sheets.</div>
+  <div class="tw"><table><thead><tr>${th('day','Date')}${th('name','Contributor')}${th('city','City')}${th('state','ST')}${th('emp','Employer / occupation')}${th('amt','Amount',1)}${th('etype','Election')}<th>Type</th><th>Report</th></tr></thead><tbody>
+  ${page.map(r=>{if(r>=0){const i=r;const ret=DICT.ttype[det.ttype[i]]==='Return Contribution';return `<tr class="row click" data-i="${i}"><td>${dayStr(det.day[i])}</td><td><b>${esc(DICT.name[det.name[i]])}</b>${DICT.ctype[det.ctype[i]]&&DICT.ctype[det.ctype[i]]!=='Individual'?`<span class="pill">${esc(DICT.ctype[det.ctype[i]].split(' /')[0])}</span>`:''}</td><td>${esc(DICT.city[det.city[i]])}</td><td>${esc(DICT.state[det.state[i]])}</td><td class="small">${esc(DICT.emp[det.emp[i]])}${DICT.occ[det.occ[i]]?`<div class="muted">${esc(DICT.occ[det.occ[i]])}</div>`:''}</td><td class="num" ${ret?'style="color:var(--crit)"':''}>${fmt$2(det.cents[i]/100)}</td><td>${esc(DICT.etype[det.etype[i]])}</td><td class="small">${ret?'Refund':esc(DICT.sub[det.sub[i]])}${DICT.desc[det.desc[i]]?`<div class="muted">${esc(DICT.desc[det.desc[i]])}</div>`:''}</td><td class="small">${esc(DICT.report[det.report[i]])}</td></tr>`;}
+    else{const i=-r-1;const ret=DICT.ttype[un.ttype[i]]==='Return Contribution';return `<tr class="row"><td>${dayStr(un.day[i])}</td><td class="muted">Unitemized donor</td><td></td><td></td><td></td><td class="num" ${ret?'style="color:var(--crit)"':''}>${fmt$2(un.cents[i]/100)}</td><td>${esc(DICT.etype[un.etype[i]])}</td><td class="small">${ret?'Refund':'Unitemized'}</td><td class="small">${esc(DICT.report[un.report[i]])}</td></tr>`;}}).join('')}
+  </tbody></table></div>
+  <div class="pager"><span>Rows ${fmtN(cPage*PS+1)}–${fmtN(Math.min(rows.length,(cPage+1)*PS))} of ${fmtN(rows.length)}</span><span>Page <input class="inline-in" type="number" id="pg" min="1" max="${pages}" value="${cPage+1}"> of ${fmtN(pages)} <button class="btn" id="pp" ${cPage===0?'disabled':''}>‹ Prev</button> <button class="btn" id="pn" ${cPage>=pages-1?'disabled':''}>Next ›</button></span></div></div>`;
+  main.querySelectorAll('th[data-k]').forEach(h=>h.addEventListener('click',()=>{const key=h.dataset.k;if(cSort.k===key)cSort.dir*=-1;else{cSort.k=key;cSort.dir=(key==='day'||key==='amt')?-1:1;}cPage=0;render();}));
+  $('#pp').addEventListener('click',()=>{cPage--;render();});$('#pn').addEventListener('click',()=>{cPage++;render();});
+  $('#pg').addEventListener('change',()=>{cPage=Math.max(0,Math.min(pages-1,(+$('#pg').value||1)-1));render();});
+  const ds=donorAgg();
+  main.querySelectorAll('tr.click').forEach(r=>r.addEventListener('click',()=>{const i=+r.dataset.i;openDonor(det.dkey[i],ds);}));
+}
+
+function renderGeo(main){
+  const det=D.det;
+  const byState=groupBy(i=>det.state[i],k=>DICT.state[k]||'(unknown)');
+  const byCity=groupBy(i=>det.city[i]*100+det.state[i],k=>DICT.city[Math.floor(k/100)]+(DICT.state[k%100]?', '+DICT.state[k%100]:''));
+  const byZip=groupBy(i=>det.zip[i],k=>DICT.zip[k]||'(blank)');
+  const tot=byState.reduce((s,r)=>s+r.total,0);
+  const ga=byState.find(r=>r.label==='GA')||{total:0,n:0,donors:0};
+  // GA metro cities (top GA cities)
+  const gaCities=byCity.filter(r=>r.label.endsWith(', GA')).slice(0,15);
+  main.innerHTML=`
+  <div class="grid kpis">
+    <div class="tile"><div class="l">Georgia donors</div><div class="v">${fmtN(ga.donors)}</div><div class="d">${fmt$(ga.total)} · ${pct(ga.total,tot)} of itemized $</div></div>
+    <div class="tile"><div class="l">Out-of-state</div><div class="v">${fmt$(tot-ga.total)}</div><div class="d">${pct(tot-ga.total,tot)} of itemized $ · ${fmtN(byState.length-1)} states/territories</div></div>
+    <div class="tile"><div class="l">Top out-of-state</div><div class="v">${esc((byState.filter(r=>r.label!=='GA')[0]||{label:'—'}).label)}</div><div class="d">${fmt$((byState.filter(r=>r.label!=='GA')[0]||{total:0}).total)}</div></div>
+    <div class="tile"><div class="l">ZIP codes represented</div><div class="v">${fmtN(byZip.length)}</div><div class="d">itemized donors</div></div>
+  </div>
+  <div class="grid three" style="margin-top:12px">
+    <div class="card"><h3>By state</h3><div class="note">Itemized dollars (click to filter)</div>${hbars(byState.slice(0,25),{click:1})}</div>
+    <div class="card"><h3>Top cities</h3><div class="note">Itemized dollars</div>${hbars(byCity.slice(0,25))}</div>
+    <div class="card"><h3>Top ZIP codes</h3><div class="note">Itemized dollars (click to search)</div>${hbars(byZip.slice(0,25),{click:1})}</div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Georgia cities</h3><div class="note">Where in-state itemized money comes from</div>${hbars(gaCities)}</div>`;
+  main.querySelectorAll('.card:nth-child(1) .r[data-k]').forEach(r=>r.addEventListener('click',()=>{$('#state').value=r.dataset.k;state.state=r.dataset.k;apply();}));
+  main.querySelectorAll('.card:nth-child(3) .r[data-k]').forEach(r=>r.addEventListener('click',()=>{const z=DICT.zip[+r.dataset.k];$('#q').value=z;state.q=z.toLowerCase();apply();}));
+}
+
+function renderWork(main){
+  const det=D.det;
+  const norm=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+  const selfLike=new Set(['self','self employed','selfemployed','self-employed','selfemployed','not employed','retired','none','na','n a','unemployed','information requested','homemaker','student','']);
+  const empM=new Map();const occM=new Map();const ttRet=D.ttIdx['Return Contribution'];
+  for(const i of SEL){if(det.ttype[i]===ttRet)continue;const a=det.cents[i]/100;
+    const e=DICT.emp[det.emp[i]];const ek=norm(e);let o=empM.get(ek);if(!o){o={k:ek,label:e,n:0,total:0,donors:new Set(),self:selfLike.has(ek)};empM.set(ek,o);}o.n++;o.total+=a;o.donors.add(det.dkey[i]);
+    const oc=DICT.occ[det.occ[i]];const ok=norm(oc);let p=occM.get(ok);if(!p){p={k:ok,label:oc||'(not reported)',n:0,total:0,donors:new Set()};occM.set(ok,p);}p.n++;p.total+=a;p.donors.add(det.dkey[i]);}
+  const emps=[...empM.values()].map(o=>({...o,donors:o.donors.size})).sort((a,b)=>b.total-a.total);
+  const occs=[...occM.values()].map(o=>({...o,donors:o.donors.size})).sort((a,b)=>b.total-a.total);
+  const orgs=emps.filter(e=>!e.self);
+  const selfTot=emps.filter(e=>e.self).reduce((s,e)=>s+e.total,0),allTot=emps.reduce((s,e)=>s+e.total,0);
+  main.innerHTML=`
+  <div class="grid kpis">
+    <div class="tile"><div class="l">Distinct employers</div><div class="v">${fmtN(orgs.length)}</div><div class="d">excluding self / retired / not employed</div></div>
+    <div class="tile"><div class="l">Retired, self-employed, not employed</div><div class="v">${pct(selfTot,allTot)}</div><div class="d">${fmt$(selfTot)} of itemized $</div></div>
+    <div class="tile"><div class="l">Distinct occupations</div><div class="v">${fmtN(occs.length)}</div><div class="d">as reported by donors</div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Top employers (organizations)</h3><div class="note">Itemized dollars from employees of each organization, as self-reported. Click to search.</div>${hbars(orgs.slice(0,40),{click:1})}</div>
+    <div class="card"><h3>Top occupations</h3><div class="note">Itemized dollars by self-reported occupation. Click to search.</div>${hbars(occs.slice(0,40),{click:1})}</div>
+  </div>
+  <div class="card small muted" style="margin-top:12px">Employer and occupation come from the live PeachFile record of each itemized contribution (the bulk export omits them). "Not Employed" is the default many online-donation platforms record when a donor skips the field, so treat it as "not reported". Spelling variants (e.g. "Emory University" vs "Emory Univ.") are grouped only when they match after trimming punctuation — use search to combine variants.</div>`;
+  main.querySelectorAll('.r[data-k]').forEach(r=>r.addEventListener('click',()=>{const lab=r.querySelector('.lab').textContent;if(lab==='(blank)'||lab==='(not reported)')return;$('#q').value=lab;state.q=lab.toLowerCase();apply();}));
+}
+
+function renderReports(main){
+  const det=D.det,un=D.unit;const ttRet=D.ttIdx['Return Contribution'];
+  // by report (all kinds incl unit)
+  const rm=new Map();const add=(r,a,isRet,isUnit,rd)=>{let o=rm.get(r);if(!o){o={k:r,label:DICT.report[r],n:0,total:0,ret:0,unit:0,item:0,filed:-1};rm.set(r,o);}if(isRet){o.ret+=a;}else{o.n++;o.total+=a;if(isUnit)o.unit+=a;else o.item+=a;}if(rd>o.filed)o.filed=rd;};
+  for(const i of SEL)add(det.report[i],det.cents[i]/100,det.ttype[i]===ttRet,false,det.repday[i]);
+  for(const i of USEL)add(un.report[i],un.cents[i]/100,un.ttype[i]===ttRet,true,un.repday[i]);
+  const reps=[...rm.values()].sort((a,b)=>a.filed-b.filed);
+  // refunds detail
+  const refunds=[];for(const i of SEL)if(det.ttype[i]===ttRet)refunds.push(i);let unitRef=0,unitRefN=0;for(const i of USEL)if(un.ttype[i]===ttRet){unitRef+=un.cents[i]/100;unitRefN++;}
+  refunds.sort((a,b)=>det.cents[a]-det.cents[b]);
+  // loans: all loan rows regardless of filters (they are few), de-duplicated by (date, amount, type) since the export lists each twice
+  const loanT=[D.ttIdx['Loan Received'],D.ttIdx['Loan Payment']].filter(x=>x!==undefined);
+  const seen=new Set();const loans=[];for(let i=0;i<N;i++){if(!loanT.includes(det.ttype[i]))continue;const key=det.ttype[i]+'|'+det.day[i]+'|'+det.cents[i]+'|'+det.desc[i];if(seen.has(key))continue;seen.add(key);loans.push(i);}
+  loans.sort((a,b)=>det.day[a]-det.day[b]);
+  let recv=0,paid=0;for(const i of loans){if(DICT.ttype[det.ttype[i]]==='Loan Received')recv+=det.cents[i]/100;else paid+=det.cents[i]/100;}
+  main.innerHTML=`
+  <div class="card"><h3>Receipts by disclosure report</h3><div class="note">Each row is a filing period; Two-Business-Day reports cover large gifts received inside the pre-election window. Filed dates come from the export.</div>
+  <table><thead><tr><th>Report</th><th>Filed</th><th class="num">Gifts</th><th class="num">Itemized $</th><th class="num">Unitemized $</th><th class="num">Gross $</th><th class="num">Refunds</th></tr></thead><tbody>
+  ${reps.map(r=>`<tr><td>${esc(r.label)}</td><td>${r.filed>=0?dayStr(r.filed):'—'}</td><td class="num">${fmtN(r.n)}</td><td class="num">${fmt$(r.item)}</td><td class="num">${fmt$(r.unit)}</td><td class="num"><b>${fmt$(r.total)}</b></td><td class="num" style="color:var(--crit)">${r.ret?fmt$(r.ret):''}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Refunds &amp; returned contributions</h3><div class="note">${fmtN(refunds.length)} itemized refunds (${fmt$(refunds.reduce((s,i)=>s+det.cents[i]/100,0))}) plus ${fmtN(unitRefN)} unitemized refunds (${fmt$(unitRef)}) within current filters.</div>
+      <div class="tw" style="max-height:420px"><table><thead><tr><th>Date</th><th>Contributor</th><th class="num">Amount</th><th>Note</th></tr></thead><tbody>${refunds.slice(0,200).map(i=>`<tr><td>${dayStr(det.day[i])}</td><td>${esc(DICT.name[det.name[i]])}<div class="small muted">${esc(DICT.city[det.city[i]])}${DICT.state[det.state[i]]?', '+DICT.state[det.state[i]]:''}</div></td><td class="num" style="color:var(--crit)">${fmt$2(det.cents[i]/100)}</td><td class="small">${esc(DICT.desc[det.desc[i]])}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h3>Candidate loans</h3><div class="note">Loans to the committee and repayments, as filed (not affected by filters). ${fmt$(recv)} received · ${fmt$(paid)} repaid · <b>${fmt$(recv-paid)} outstanding</b> per these filings. The bulk export lists each loan line twice; duplicates are collapsed here.</div>
+      <table><thead><tr><th>Date</th><th>Type</th><th>From / to</th><th class="num">Amount</th><th>Description</th></tr></thead><tbody>${loans.map(i=>`<tr><td>${dayStr(det.day[i])}</td><td>${esc(DICT.ttype[det.ttype[i]])}</td><td>${esc(DICT.name[det.name[i]])}</td><td class="num">${fmt$2(det.cents[i]/100)}</td><td class="small">${esc(DICT.desc[det.desc[i]])}</td></tr>`).join('')}</tbody></table></div>
+  </div>`;
+}
+
+// ---------- field comparison ----------
+const PARTY_COLOR={DEM:'var(--s1)',REP:'var(--s8)',LIB:'var(--s4)',OTH:'var(--s7)',NON:'var(--s7)'};
+function multiLine(el,series,xlabels,opts={}){
+  const W=el.clientWidth||800,H=opts.h||260,m={t:14,r:28,b:30,l:60};const iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const max=Math.max(1,...series.flatMap(s=>s.values));const step=niceStep(max/4);const ymax=Math.ceil(max/step)*step;
+  const n=xlabels.length;const y=v=>m.t+ih-(v/ymax)*ih;const x=i=>m.l+(n>1?i/(n-1):0)*iw;
+  let g=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><g class="grid">`;
+  for(let v=0;v<=ymax;v+=step)g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
+  g+='</g>';
+  const placed=[];series.forEach(s=>{g+=`<polyline points="${s.values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;const li=s.values.length-1;const yy=y(s.values[li]);if(!placed.some(q=>Math.abs(q-yy)<12)){placed.push(yy);g+=`<text x="${x(li)-4}" y="${yy-5}" text-anchor="end" style="fill:${s.color};font-weight:600">${esc(s.name)}</text>`;}});
+  const lab=Math.max(1,Math.floor(n/8));xlabels.forEach((d,i)=>{if(i%lab===0||i===n-1)g+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${d}</text>`;});
+  g+=`<line id="ch" class="axis" y1="${m.t}" y2="${m.t+ih}" x1="-10" x2="-10"/><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" class="hit"/></svg>`;
+  el.innerHTML=g;const svg=el.querySelector('svg'),ch=svg.querySelector('#ch');
+  svg.querySelector('.hit').addEventListener('mousemove',e=>{const r=svg.getBoundingClientRect();const i=Math.max(0,Math.min(n-1,Math.round((e.clientX-r.left-m.l)/iw*(n-1))));ch.setAttribute('x1',x(i));ch.setAttribute('x2',x(i));showTT(`<b>${esc(xlabels[i])}</b><br>`+series.map(s=>`${esc(s.name)}: ${fmt$(s.values[i])}`).join('<br>'));});
+  svg.querySelector('.hit').addEventListener('mouseleave',()=>{hideTT();ch.setAttribute('x1',-10);ch.setAttribute('x2',-10);});
+}
+let fieldSort={k:'net',dir:-1};
+function renderField(main){
+  const C=FIELD.candidates;C.forEach(c=>c.netEx=c.net-(c.selfFunding||0));
+  const key=fieldSort.k;const rows=[...C].sort((a,b)=>{const va=a[key]??-Infinity,vb=b[key]??-Infinity;if(typeof va==='number'||typeof vb==='number')return ((va||0)-(vb||0))*fieldSort.dir;return (va<vb?-1:va>vb?1:0)*fieldSort.dir;});
+  const th=(k,l,num)=>`<th class="${num?'num':''} ${fieldSort.k===k?'on':''}" data-k="${k}">${l}${fieldSort.k===k?(fieldSort.dir<0?' ↓':' ↑'):''}</th>`;
+  const totalNet=C.reduce((s,c)=>s+c.net,0);
+  // monthly cumulative for top 6 by net (excluding candidates whose money is >80% self-funded? no — show as reported, label)
+  const top=[...C].sort((a,b)=>b.net-a.net).slice(0,6);
+  const months=[...new Set(top.flatMap(c=>Object.keys(c.monthly).map(Number)))].sort((a,b)=>a-b);
+  const mmin=months[0],mmax=months[months.length-1];const xl=[];for(let k=mmin;k<=mmax;k++)xl.push(monthLabel(k));
+  const series=top.map(c=>{let acc=0;const vals=[];for(let k=mmin;k<=mmax;k++){acc+=c.monthly[k]||0;vals.push(acc);}return {name:c.short,color:PARTY_COLOR[c.party]||'var(--s7)',values:vals};});
+  // bars: net raised by candidate (excluding self-funding shown separately)
+  const barC=[...C].sort((a,b)=>b.net-a.net).filter(c=>c.net>0);
+  main.innerHTML=`
+  <div class="grid kpis">
+    <div class="tile"><div class="l">Committees with receipts</div><div class="v">${fmtN(C.filter(c=>c.net>0).length)}</div><div class="d">of ${C.length} registered for Governor 2026</div></div>
+    <div class="tile"><div class="l">Total raised by the field</div><div class="v">${fmtK(totalNet)}</div><div class="d">net of refunds, 2025–26 filings</div></div>
+    <div class="tile"><div class="l">Largest small-dollar base</div><div class="v">${esc([...C].sort((a,b)=>b.unitemized-a.unitemized)[0].short)}</div><div class="d">${fmt$([...C].sort((a,b)=>b.unitemized-a.unitemized)[0].unitemized)} unitemized</div></div>
+    <div class="tile"><div class="l">Most named donors</div><div class="v">${esc([...C].sort((a,b)=>b.donors-a.donors)[0].short)}</div><div class="d">${fmtN([...C].sort((a,b)=>b.donors-a.donors)[0].donors)} individuals</div></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Where the money stands</h3><div class="note">Every committee registered for Governor in the 2026 cycle with contributions on file. Click a column to sort; click a row to open that candidate's full explorer. Self-funding = gifts from the candidate or their own committee (loans are listed separately and are not contributions).</div>
+  <div class="tw" style="max-height:none"><table><thead><tr>${th('cand','Candidate')}${th('party','Party')}${th('net','Net raised',1)}${th('netEx','Excl. self-funding',1)}${th('itemized','Itemized',1)}${th('unitemized','Small-dollar (unitemized)',1)}${th('inkind','In-kind',1)}${th('contributions','# gifts',1)}${th('donors','Named donors',1)}${th('avgGift','Avg gift',1)}${th('gaShare','GA share',1)}${th('selfFunding','Self-funding',1)}${th('loansReceived','Loans in',1)}${th('refunds','Refunds',1)}${th('lastDay','Latest',1)}</tr></thead><tbody>
+  ${rows.map(c=>`<tr class="row click" data-id="${c.id}"><td><b>${esc(c.cand)}</b><div class="small muted">${esc(c.committee)}</div></td><td><span class="pill" style="border-color:${PARTY_COLOR[c.party]||'var(--border)'};color:${PARTY_COLOR[c.party]||'var(--ink2)'}">${c.party}</span></td><td class="num"><b>${fmt$(c.net)}</b></td><td class="num">${fmt$(c.net-(c.selfFunding||0))}</td><td class="num">${fmt$(c.itemized)}</td><td class="num">${fmt$(c.unitemized)}<div class="small muted">${pct(c.unitemized,c.gross)}</div></td><td class="num">${fmt$(c.inkind)}</td><td class="num">${fmtN(c.contributions)}</td><td class="num">${fmtN(c.donors)}</td><td class="num">${fmt$2(c.avgGift)}<div class="small muted">med ${fmt$2(c.medianGift)}</div></td><td class="num">${c.gaShare==null?'—':(100*c.gaShare).toFixed(0)+'%'}</td><td class="num">${c.selfFunding?fmt$(c.selfFunding):''}</td><td class="num">${c.loansReceived?fmt$(c.loansReceived):''}</td><td class="num" style="color:var(--crit)">${c.refunds?fmt$(c.refunds):''}</td><td class="num">${dayStr(c.lastDay)}</td></tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Net raised by committee</h3><div class="note"><label><input type="radio" name="selfm" value="ex" checked> Exclude gifts from the candidate personally</label> &nbsp; <label><input type="radio" name="selfm" value="in"> As filed (includes self-funding)</label></div><div class="legend"><span><i style="background:var(--s1)"></i>Democrat</span><span><i style="background:var(--s8)"></i>Republican</span><span><i style="background:var(--s4)"></i>Libertarian</span><span><i style="background:var(--s7)"></i>Other</span></div><div id="f1"></div></div>
+    <div class="card"><h3>Cumulative receipts — top 6</h3><div class="note">Running total of gross contributions by month of receipt.</div><div class="legend" id="f2leg">${series.map((s,i)=>`<span data-i="${i}" style="cursor:pointer" title="Click to hide / show"><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div><div id="f2"></div><div class="small muted">Click a name in the legend to hide or show that candidate (useful when one self-funder dominates the scale).</div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h3>Small-dollar share</h3><div class="note">Share of gross receipts arriving as unitemized (small) contributions — a proxy for grassroots breadth.</div>${hbars([...C].filter(c=>c.gross>0).map(c=>({k:c.id,label:c.short,n:c.contributions,total:Math.round(1000*c.unitemized/c.gross)/10})).sort((a,b)=>b.total-a.total),{pct:1})}<div class="small muted">Percent of gross receipts · number of contributions.</div></div>
+    <div class="card"><h3>Gift-size mix (dollars)</h3><div class="note">Share of gross dollars from each size band.</div>
+    <table><thead><tr><th>Candidate</th><th class="num">&lt; $100</th><th class="num">$100–999</th><th class="num">$1,000–8,399</th><th class="num">$8,400+</th></tr></thead><tbody>${[...C].filter(c=>c.gross>0).sort((a,b)=>b.net-a.net).map(c=>`<tr><td>${esc(c.short)}</td>${c.bands.sums.map(s=>`<td class="num">${pct(s,c.gross)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+  </div>
+  <div class="src">Source: Georgia Government Transparency &amp; Campaign Finance Commission, PeachFile bulk Contribution files for filing years 2025 and 2026 (extracted ${FIELD.extractedAsOf}); candidate list from PeachFile's candidate registry (office: Governor, 2026 Georgia State Election). Figures are as filed by each committee and may be amended. Lucy McBath's exploratory committee shows no contributions in the bulk files and is omitted.</div>`;
+  main.querySelectorAll('th[data-k]').forEach(h=>h.addEventListener('click',()=>{const k=h.dataset.k;if(fieldSort.k===k)fieldSort.dir*=-1;else{fieldSort.k=k;fieldSort.dir=(k==='cand'||k==='party')?1:-1;}render();}));
+  main.querySelectorAll('tr.click').forEach(r=>r.addEventListener('click',()=>{tab='overview';[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x.dataset.tab==='overview'));loadCandidate(+r.dataset.id);}));
+  const bc=barC.map(c=>c.short);
+  // one bar per candidate, color by party: build as stacked series per party so colors follow entity
+  const parties=[...new Set(barC.map(c=>c.party))];
+  const drawF1=()=>{const ex=main.querySelector('input[name=selfm]:checked').value==='ex';const list=[...barC].map(c=>({...c,v:ex?Math.max(0,c.net-(c.selfFunding||0)):c.net})).sort((a,b)=>b.v-a.v);barsChart($('#f1'),parties.map(p=>({name:p,color:PARTY_COLOR[p]||'var(--s7)',values:list.map(c=>c.party===p?c.v:0)})),list.map(c=>c.short),{h:280,extra:i=>ex&&list[i].selfFunding?`+ ${fmt$(list[i].selfFunding)} self-funded (excluded)`:''});};
+  main.querySelectorAll('input[name=selfm]').forEach(r=>r.addEventListener('change',drawF1));drawF1();
+  const hidden=new Set();const drawF2=()=>{const vis=series.filter((s,i)=>!hidden.has(i));main.querySelectorAll('#f2leg span').forEach(sp=>sp.style.opacity=hidden.has(+sp.dataset.i)?.35:1);if(vis.length)multiLine($('#f2'),vis,xl,{h:280});else $('#f2').innerHTML='<div class="muted small" style="padding:40px;text-align:center">All series hidden</div>';};main.querySelectorAll('#f2leg span').forEach(sp=>sp.addEventListener('click',()=>{const i=+sp.dataset.i;hidden.has(i)?hidden.delete(i):hidden.add(i);drawF2();}));drawF2();
+}
+
+// ---------- CSV copy ----------
+async function copyCsv(){
+  const det=D.det,un=D.unit;const q=s=>{s=String(s??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const hdr=['Transaction Id','Date','Contributor','Contributor Type','Address','City','State','Zip','Employer','Occupation','Amount','Election','Type','Sub Type','Description','Report','Amended'];
+  const out=[hdr.join(',')];
+  for(const i of SEL)out.push([det.tid[i],dayStr(det.day[i]),DICT.name[det.name[i]],DICT.ctype[det.ctype[i]],DICT.addr[det.addr[i]],DICT.city[det.city[i]],DICT.state[det.state[i]],DICT.zip[det.zip[i]],DICT.emp[det.emp[i]],DICT.occ[det.occ[i]],(det.cents[i]/100).toFixed(2),DICT.etype[det.etype[i]],DICT.ttype[det.ttype[i]],DICT.sub[det.sub[i]],DICT.desc[det.desc[i]],DICT.report[det.report[i]],det.amended[i]?'Y':'N'].map(q).join(','));
+  for(const i of USEL)out.push(['',dayStr(un.day[i]),'Unitemized','','','','','','','',(un.cents[i]/100).toFixed(2),DICT.etype[un.etype[i]],DICT.ttype[un.ttype[i]],'Unitemized Contribution','',DICT.report[un.report[i]],'N'].map(q).join(','));
+  try{await navigator.clipboard.writeText(out.join('\n'));toast(`Copied ${fmtN(out.length-1)} rows as CSV — paste into Excel or Sheets`);}catch(e){toast('Clipboard blocked by the browser — try again after clicking on the page');}
+}
+
+loadField().catch(e=>{$('#main').innerHTML=`<div class="loading">Could not load the data: ${esc(e.message)}</div>`;});
+window.addEventListener('resize',()=>{clearTimeout(window.__rz);window.__rz=setTimeout(()=>{if(D&&(tab==='overview'||tab==='field'))render();},200);});
+</script>
+</body>
+</html>

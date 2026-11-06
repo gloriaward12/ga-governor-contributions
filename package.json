@@ -1,0 +1,13 @@
+{
+  "name": "ga-governor-contributions",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Contribution Explorer for the 2026 Georgia governor's race, built from PeachFile public data",
+  "scripts": {
+    "fetch": "node scripts/fetch_bulk.mjs data-raw/governor_field_contributions.csv",
+    "enrich": "node scripts/enrich.mjs data-raw/api_enrichment.json.gz",
+    "build-data": "python3 scripts/build_data.py data-raw/governor_field_contributions.csv public/data data-raw/api_enrichment.json.gz",
+    "refresh": "npm run fetch && npm run enrich && npm run build-data",
+    "serve": "python3 -m http.server 8765 --directory public"
+  }
+}
