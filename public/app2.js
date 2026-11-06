@@ -499,7 +499,7 @@ function xcStats(P) {                                   // per name-key totals f
   let m = XC.stats.get(P); if (m) return m; m = new Map();
   const det = P.det, dict = P.dict, con = dict.ttype.indexOf('Contribution'), ret = dict.ttype.indexOf('Return Contribution');
   for (let i = 0; i < det.tid.length; i++) {
-    const t = det.ttype[i]; if (t !== con && t !== ret) continue; const k = det.nkey[i];
+    const t = det.ttype[i]; if (t !== con && t !== ret) continue; const k = dict.nkey[det.nkey[i]];   // the name string, not the per-file index
     let o = m.get(k); if (!o) { o = { name: dict.name[det.name[i]], city: dict.city[det.city[i]], state: dict.state[det.state[i]], zip: dict.zip[det.zip[i]], emp: dict.emp[det.emp[i]], total: 0, n: 0, last: -1 }; m.set(k, o); }
     o.total += det.cents[i] / 100; if (t === con) { o.n++; if (det.day[i] > o.last) o.last = det.day[i]; }
   }
