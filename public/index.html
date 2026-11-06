@@ -224,7 +224,7 @@ async function loadField(){
   const gc=document.createElement('optgroup');gc.label='Candidate committees';const gl=document.createElement('optgroup');gl.label='Leadership committees';
   for(const c of FIELD.candidates){const o=document.createElement('option');o.value=c.id;o.textContent=c.kind==='leadership'?`${c.committee} — allied with ${(FIELD.candidates.find(x=>x.id===c.ally)||{}).cand||''}`:`${c.cand} (${c.party}) — ${c.committee}`;(c.kind==='leadership'?gl:gc).appendChild(o);}
   sel.appendChild(gc);if(gl.children.length)sel.appendChild(gl);
-  sel.addEventListener('change',()=>{if(tab==='field')tab='overview';loadCandidate(+sel.value);});
+  sel.addEventListener('change',()=>{if(tab==='field'||(tab==='pbg'&&+sel.value!==105433)){tab='overview';[...$('#tabs').children].forEach(x=>x.setAttribute('aria-selected',x.dataset.tab==='overview'));}loadCandidate(+sel.value);});
   const h=(location.hash||'').slice(1);const m=h.match(/^cand-(\d+)/);
   let start=m?+m[1]:(FIELD.candidates.some(c=>c.id===100663)?100663:FIELD.candidates[0].id);if(!FIELD.candidates.some(c=>c.id===start))start=FIELD.candidates[0].id;
   sel.value=start;await loadCandidate(start);
@@ -433,7 +433,7 @@ function hbars(rows,opts={}){
 // ---------- render ----------
 function render(){
   const main=$('#main');
-  const hf=tab==='field'||tab==='pbg';$('#filters').style.display=hf?'none':'';$('#chips').style.display=hf?'none':'';$('#copyCsv').style.visibility=hf?'hidden':'';
+  const hf=tab==='field';$('#filters').style.display=hf?'none':'';$('#chips').style.display=hf?'none':'';$('#copyCsv').style.visibility=hf?'hidden':'';
   if(tab==='field'){renderField(main);return;}
   if(tab==='pbg'){if(typeof renderBattleground==='function')renderBattleground(main);else main.innerHTML='<div class="loading">Loading…</div>';return;}
   if(D&&CUR){$('#title').textContent=D.meta.committee;$('#subtitle').textContent=D.meta._sub||'';}
