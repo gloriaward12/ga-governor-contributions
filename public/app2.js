@@ -369,11 +369,17 @@ function render() {
   if (tab === 'overview') renderOverview(main); else if (tab === 'donors') renderDonors(main); else if (tab === 'intel') renderIntel(main); else if (tab === 'contribs') renderContribs(main); else if (tab === 'spending') renderSpending(main); else if (tab === 'geo') renderGeo(main); else if (tab === 'work') renderWork(main); else renderReports(main);
 }
 // extend the search blob with county, metro and sector once a candidate loads
-async function load(id) {
-  await BASE.load(id);
+function extendSearch() {
+  if (!D || D._searchExtended) return; D._searchExtended = true;
   const det = D.det; const co = DICT.county, me = DICT.metro, se = DICT.sector;
   for (let i = 0; i < N; i++) D.search[i] += '|' + (co[det.county[i]] + '|' + me[det.metro[i]] + '|' + se[det.sector[i]]).toLowerCase();
+}
+async function load(id) {
+  await BASE.load(id);
+  extendSearch();
   if (state.q) apply();
 }
 // accept the new tab names in the hash
 (function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } })();
+// if the base page already finished loading before this script arrived (cached data), re-render with the extended views
+if (typeof D !== 'undefined' && D && D.det) { extendSearch(); render(); }
