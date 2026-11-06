@@ -1,5 +1,5 @@
 """Build per-candidate data files + a field summary for the Georgia governor's race.
-usage: prep_field.py <field_csv> <out_dir> [enrichment json.gz ...]
+usage: build_data.py <field_csv> <out_dir> [enrichment json.gz ...]
 """
 import pandas as pd, json, re, gzip, datetime as dt, sys, os, collections
 
@@ -7,6 +7,13 @@ SRC, OUT = sys.argv[1], sys.argv[2]
 ENRICH = sys.argv[3:]
 os.makedirs(OUT, exist_ok=True)
 EPOCH = dt.date(2025, 1, 1)
+import zoneinfo
+NOW = dt.datetime.now(zoneinfo.ZoneInfo('America/New_York'))
+# the Commission regenerates the bulk files nightly at ~2 AM ET
+_ex = NOW.replace(hour=2, minute=0, second=0, microsecond=0)
+if NOW < _ex: _ex -= dt.timedelta(days=1)
+EXTRACTED = os.environ.get('EXTRACTED_AS_OF') or _ex.strftime('%m/%d/%Y %I:%M %p ET')
+PULLED = NOW.strftime('%m/%d/%Y %I:%M %p ET')
 CANDS = {  # entity id -> meta (from PeachFile candidate registry, 2026 Georgia State Election, office = Governor)
     100663: dict(cand='Keisha Lance Bottoms', short='Bottoms', party='DEM'),
     103524: dict(cand='Rick Jackson', short='R. Jackson', party='REP'),
@@ -31,7 +38,9 @@ def days(s):
 def clean(s): return re.sub(r'\s+', ' ', str(s)).strip()
 def norm(s): return re.sub(r'[^a-z0-9]', '', s.lower())
 
-df = pd.read_csv(SRC, dtype=str, keep_default_na=False)
+df = pd.read_csv(SRC, dtype=str, keep_default_na=False, on_bad_lines='skip', encoding_errors='replace')
+for c in df.columns: df[c] = df[c].fillna('')
+df = df[pd.to_numeric(df['Filing Entity ID'], errors='coerce').notna()]
 df['Filing Entity ID'] = df['Filing Entity ID'].astype(int)
 df = df[df['Filing Entity ID'].isin(CANDS)].copy()
 df['amt'] = (df['Transaction Amount'].str.replace(r'[\$,]', '', regex=True).str.replace(r'^\((.*)\)$', r'-\1', regex=True).astype(float))
@@ -59,7 +68,7 @@ for a in api:
     fid = a.get('fid') or name_to_id.get(clean(a.get('filer') or '')) or (100663 if 'fid' not in a and 'filer' not in a else None)
     if fid not in CANDS: continue
     # only add rows the bulk extract could not have had yet: recent Two-Business-Day filings
-    if not a.get('timed') or days(a['d']) < days('10/01/2026'): continue
+    if not a.get('timed') or days(a['d']) < (NOW.date() - EPOCH).days - 45: continue
     amt = float(a['a']) * (-1 if a['tt'] == 'Return Contribution' else 1)
     new_rows.append({'Filing Entity ID': fid, 'Filing Entity Name': a.get('filer') or '', 'Transaction Id': str(a['id']), 'Transaction Type': a['tt'],
         'Transaction Sub Type': 'In-Kind Contribution' if 'In-Kind' in a['sub'] else 'Itemized Contribution',
@@ -151,6 +160,6 @@ for fid, meta in CANDS.items():
     print(fid, committee, 'rows', len(sub), 'gross', round(gross), 'net', round(gross + ret['amt'].sum()), 'added', added.get(fid, 0), 'kb', os.path.getsize(os.path.join(OUT, f'cand-{fid}.json')) // 1024)
 
 field.sort(key=lambda x: -x['net'])
-json.dump({'generated': dt.datetime.utcnow().isoformat() + 'Z', 'extractedAsOf': '11/06/2026 02:00 AM', 'epoch': EPOCH.isoformat(), 'candidates': field},
+json.dump({'generated': NOW.isoformat(), 'extractedAsOf': EXTRACTED, 'epoch': EPOCH.isoformat(), 'candidates': field},
           open(os.path.join(OUT, 'field.json'), 'w'), separators=(',', ':'))
 print('field.json', len(field), 'candidates')

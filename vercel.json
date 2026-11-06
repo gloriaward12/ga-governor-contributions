@@ -1,4 +1,8 @@
 {
+  "framework": null,
+  "installCommand": "python3 -m pip install --quiet --break-system-packages pandas",
+  "buildCommand": "node scripts/fetch_bulk.mjs data-raw/governor_field_contributions.csv && node scripts/enrich.mjs data-raw/api_enrichment.json.gz && python3 scripts/build_data.py data-raw/governor_field_contributions.csv public/data data-raw/api_enrichment.json.gz",
+  "outputDirectory": "public",
   "cleanUrls": true,
   "headers": [
     { "source": "/data/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" } ] }
