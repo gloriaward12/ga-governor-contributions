@@ -473,7 +473,7 @@ function renderOverview(main){
     <div class="card"><h3>Cumulative raised</h3><div class="note">Running total of all matching contributions, net of refunds, by transaction date.</div><div id="c2"></div></div>
   </div>
   <div class="grid two" style="margin-top:12px">
-    <div class="card"><h3>Gift size distribution</h3><div class="note">Count of contributions by size band. Per-election limit used for the top band: $<input class="inline-in" type="number" id="limit" value="${limitInput()}"> <span class="muted">(Georgia statewide limit — verify current cycle)</span></div><div id="c3"></div>
+    <div class="card"><h3>Gift size distribution</h3><div class="note">Count of contributions by size band. Per-election limit used for the top band: $<input class="inline-in" type="number" id="limit" value="${limitInput()}"> <span class="muted">(Georgia statewide limit, 2025–26 cycle; edit to test other thresholds)</span></div><div id="c3"></div>
       <table style="margin-top:8px"><tr><th>Band</th><th class="num">Gifts</th><th class="num">Dollars</th><th class="num">% of $</th></tr>${B.map((b,i)=>`<tr><td>${b[2]}</td><td class="num">${fmtN(bs[i].n)}</td><td class="num">${fmt$(bs[i].total)}</td><td class="num">${pct(bs[i].total,T.gross)}</td></tr>`).join('')}</table></div>
     <div class="card"><h3>Monthly contribution count</h3><div class="note">Itemized vs. unitemized transactions per month — a read on small-dollar momentum.</div>
       <div class="legend"><span><i style="background:var(--s1)"></i>Itemized</span><span><i style="background:var(--s3)"></i>Unitemized</span></div><div id="c4"></div></div>
