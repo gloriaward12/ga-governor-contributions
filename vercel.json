@@ -1,10 +1,12 @@
 {
   "framework": null,
-  "installCommand": "python3 -m pip install --quiet --break-system-packages pandas",
-  "buildCommand": "node scripts/fetch_bulk.mjs data-raw/governor_field_contributions.csv && node scripts/enrich.mjs data-raw/api_enrichment.json.gz && python3 scripts/build_data.py data-raw/governor_field_contributions.csv public/data data-raw/api_enrichment.json.gz",
+  "installCommand": "npm install --no-audit --no-fund && python3 -m pip install --quiet --break-system-packages pandas zipcodes",
+  "buildCommand": "node scripts/fetch_bulk.mjs data-raw && node scripts/enrich.mjs data-raw/api_enrichment.json.gz && node scripts/registry.mjs data-raw/registry.json && node scripts/geo.mjs && python3 scripts/build_data.py data-raw public/data data-raw/api_enrichment.json.gz",
   "outputDirectory": "public",
   "cleanUrls": true,
+  "crons": [ { "path": "/api/refresh", "schedule": "30 8 * * *" } ],
   "headers": [
-    { "source": "/data/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" } ] }
+    { "source": "/data/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" } ] },
+    { "source": "/geo/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=86400" } ] }
   ]
 }

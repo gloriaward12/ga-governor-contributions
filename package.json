@@ -1,13 +1,20 @@
 {
-  "name": "ga-governor-contributions",
+  "name": "governor-pulse",
   "private": true,
-  "version": "1.0.0",
-  "description": "Contribution Explorer for the 2026 Georgia governor's race, built from PeachFile public data",
+  "version": "2.0.0",
+  "description": "Governor Pulse: contribution and expenditure explorer for the 2026 Georgia governor's race, built from PeachFile public data",
+  "type": "module",
+  "dependencies": {
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1"
+  },
   "scripts": {
-    "fetch": "node scripts/fetch_bulk.mjs data-raw/governor_field_contributions.csv",
+    "fetch": "node scripts/fetch_bulk.mjs data-raw",
     "enrich": "node scripts/enrich.mjs data-raw/api_enrichment.json.gz",
-    "build-data": "python3 scripts/build_data.py data-raw/governor_field_contributions.csv public/data data-raw/api_enrichment.json.gz",
-    "refresh": "npm run fetch && npm run enrich && npm run build-data",
+    "registry": "node scripts/registry.mjs data-raw/registry.json",
+    "geo": "node scripts/geo.mjs",
+    "build-data": "python3 scripts/build_data.py data-raw public/data data-raw/api_enrichment.json.gz",
+    "refresh": "npm run fetch && npm run enrich && npm run registry && npm run geo && npm run build-data",
     "serve": "python3 -m http.server 8765 --directory public"
   }
 }

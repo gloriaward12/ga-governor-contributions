@@ -8,7 +8,10 @@ A static web app for exploring every campaign contribution filed by the committe
 * **Geography** — states, cities, ZIP codes.
 * **Employers & occupations** — from the live PeachFile record of each itemized gift (the bulk export omits these fields).
 * **Reports, returns & loans** — receipts by filing period, refunds, candidate loans.
-* **Compare the field** — every registered committee side by side.
+* **Compare the field** — every registered committee side by side, including spending, cash on hand, burn and runway.
+* **Spending** — raised vs. spent by month, spend categories, top payees (card and reimbursement line items resolved to the end recipient), full ledger, CSV copy.
+* **Donor intelligence** — headroom to the legal limit per election (call-sheet export), cross-candidate donors, new/returning cohorts, lapsed and upgrade lists, and review flags (over-limit after address matching, shared-address clusters, refunds, amendments).
+* **Momentum and briefing** — 7/30-day receipts vs. prior window, first-time donors, average gift trend, election-date markers, an auto-written briefing paragraph and a print view.
 
 Global filters (search, dates, election, kind, contributor type, state, amount, report) apply to every tab.
 

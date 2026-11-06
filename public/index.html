@@ -5,140 +5,191 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Georgia Governor 2026 — Contribution Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%238b1a2b%27/%3E%3Crect x=%277%27 y=%2716%27 width=%274%27 height=%279%27 fill=%27white%27/%3E%3Crect x=%2714%27 y=%2710%27 width=%274%27 height=%2715%27 fill=%27white%27/%3E%3Crect x=%2721%27 y=%276%27 width=%274%27 height=%2719%27 fill=%27white%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root{
-  color-scheme:light;
-  --plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
-  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
-  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;
-  --seq100:#cde2fb;--seq250:#86b6ef;--seq400:#3987e5;--seq500:#256abf;--seq600:#184f95;--seq700:#0d366b;
-  --good:#006300;--crit:#d03b3b;--accent:#8b1a2b;
-  --radius:10px;
-}
-@media (prefers-color-scheme:dark){
-  :root:where(:not([data-theme="light"])){
-    color-scheme:dark;--plane:#0d0d0d;--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;
-    --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
-    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;
-    --good:#0ca30c;--accent:#e8a0ab;
-  }
+  --rail:#1F2A3A;--rail-2:#273448;--rail-ink:#E6EAF0;--rail-mute:#9AA5B5;
+  --field:#EEF0F3;--paper:#FFFFFF;--ink:#1A1F2B;--ink2:#5B6472;--muted:#8A93A1;--rule:#D9DDE3;--rule-2:#EDF0F3;
+  --gold:#B98A2F;--gold-2:#9A7224;--gold-wash:#FBF6E9;
+  --s1:#2A6FD6;--s2:#E07A3F;--s3:#1E9E82;--s4:#C99A1E;--s5:#C75C8E;--s6:#2E8B3C;--s7:#6B5BD6;--s8:#C8413E;
+  --seq400:#2A6FD6;--seq500:#235CB3;--seq600:#1B4A91;
+  --good:#1F7A36;--crit:#B8322E;--accent:var(--gold);
+  --plane:var(--field);--surface:var(--paper);--grid:var(--rule-2);--axis:var(--rule);--border:var(--rule);
+  --radius:3px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--plane);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--field);color:var(--ink);font:14px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-feature-settings:"tnum" 0}
 a{color:inherit}
 button,input,select{font:inherit;color:inherit}
-header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
-.hd{display:flex;align-items:center;gap:14px;padding:12px 18px;flex-wrap:wrap}
-.hd h1{font-size:17px;margin:0;font-weight:650;letter-spacing:-.01em}
-.hd .sub{color:var(--ink2);font-size:12.5px}
-.tabs{display:flex;gap:2px;padding:0 12px;overflow-x:auto}
-.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 12px;color:var(--ink2);cursor:pointer;white-space:nowrap;border-radius:0}
-.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
-.filters{display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);align-items:end}
-.f{display:flex;flex-direction:column;gap:3px}
-.f label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.f input,.f select{background:var(--plane);border:1px solid var(--border);border-radius:7px;padding:6px 8px;min-width:120px;height:32px}
-.f input[type=number]{width:110px;min-width:0}
-.f input[type=date]{min-width:0;width:140px}
-.f.search input{min-width:240px}
-.btn{background:var(--plane);border:1px solid var(--border);border-radius:7px;padding:6px 10px;height:32px;cursor:pointer;color:var(--ink2)}
-.btn:hover{color:var(--ink)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.chips{display:flex;gap:6px;flex-wrap:wrap;padding:6px 18px 0;font-size:12px;color:var(--ink2)}
-.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:2px 9px}
-.chip b{color:var(--ink)}
-main{padding:14px 18px 60px;max-width:1500px;margin:0 auto}
-.grid{display:grid;gap:12px}
-.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
-.tile .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.tile .v{font-size:24px;font-weight:650;letter-spacing:-.02em;margin-top:2px}
-.tile .d{font-size:12px;color:var(--ink2);margin-top:2px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;min-width:0}
-.card h3{margin:0 0 2px;font-size:14px;font-weight:650}
-.card .note{color:var(--muted);font-size:12px;margin-bottom:8px}
-.two{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+/* rail */
+.rail{background:var(--rail);color:var(--rail-ink);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:22px 18px 16px}
+.brand{font-weight:700;font-size:21px;letter-spacing:-.025em;line-height:1.05}
+.brand small{display:block;font-weight:400;font-size:12.5px;color:var(--rail-mute);letter-spacing:0;margin-top:4px}
+.rail .cand-wrap{margin:22px 0 10px}
+.rail label.rl{display:block;font-size:12px;color:var(--rail-mute);margin-bottom:6px}
+#cand{width:100%;background:var(--rail-2);border:1px solid #3A475C;color:var(--rail-ink);border-radius:var(--radius);padding:8px 30px 8px 10px;font-weight:600;font-size:13px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%239AA5B5' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;cursor:pointer;text-overflow:ellipsis;height:auto}
+.tabs{display:flex;flex-direction:column;gap:1px;margin-top:14px}
+.tabs button{text-align:left;background:none;border:0;border-left:2px solid transparent;padding:8px 10px;color:var(--rail-mute);cursor:pointer;border-radius:0;font-size:13.5px;line-height:1.3}
+.tabs button:hover{color:var(--rail-ink)}
+.tabs button[aria-selected="true"]{color:#fff;border-left-color:var(--gold);background:linear-gradient(90deg,rgba(185,138,47,.14),transparent 70%);font-weight:600}
+.tabs button[data-tab="field"]{margin-top:14px;padding-top:12px;border-top:1px solid #34425A;color:#E7C978}
+.tabs button[data-tab="field"][aria-selected="true"]{color:#F3DC9A}
+.fresh{margin-top:auto;font-size:11.5px;line-height:1.45;color:var(--rail-mute);border-top:1px solid #34425A;padding-top:12px}
+.fresh b{color:var(--rail-ink);font-weight:600}
+.fresh .by{margin-top:8px}
+/* content */
+.content{min-width:0;display:flex;flex-direction:column}
+.top{background:var(--paper);border-bottom:1px solid var(--rule);padding:18px 28px 0}
+.hd{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.hd h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.hd .sub{color:var(--ink2);font-size:13px;margin-top:4px;max-width:70ch}
+.actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:0 12px;height:32px;cursor:pointer;color:var(--ink);font-weight:500;font-size:13px}
+.btn:hover{border-color:#B9C0CA;background:#FAFBFC}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.filters{display:flex;flex-wrap:wrap;gap:8px 10px;padding:14px 0 12px;align-items:end}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:11.5px;color:var(--ink2)}
+.f input,.f select{background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:0 9px;min-width:124px;max-width:240px;height:32px;font-size:13px}
+.f select{text-overflow:ellipsis}
+.f input:hover,.f select:hover{border-color:#B9C0CA}
+.f input[type=number]{width:104px;min-width:0}
+.f input[type=date]{min-width:0;width:142px}
+.f input[type=checkbox]{width:16px;min-width:0;height:16px;margin:0}
+.f.search input{min-width:260px}
+.f select{appearance:none;-webkit-appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%235B6472' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 12px;font-size:12px;color:var(--ink2);align-items:center}
+.chip{background:var(--field);border:1px solid var(--rule);border-radius:999px;padding:2px 9px}
+.chip b{color:var(--ink);font-weight:600}
+.chips .chip:last-of-type{background:none}
+main{padding:20px 28px 64px;max-width:1480px;width:100%}
+.grid{display:grid;gap:14px}
+/* ledger band: KPIs as one panel of figures */
+.kpis{display:flex;flex-wrap:wrap;gap:0;background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+.tile{flex:1 1 185px;padding:14px 18px 14px;border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);min-width:0}
+.tile .l{font-size:12px;color:var(--ink2)}
+.tile .v{font-size:21px;font-weight:700;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
+.tile .d{font-size:12px;color:var(--muted);margin-top:4px}
+.kpis .tile:first-child{flex:1.3 1 230px;background:var(--gold-wash)}
+.kpis .tile:first-child .v{font-size:28px;color:var(--gold-2)}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:16px 18px;min-width:0}
+.card h3{margin:0 0 2px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card .note{color:var(--ink2);font-size:12.5px;margin-bottom:10px;max-width:90ch}
+.two{grid-template-columns:repeat(auto-fit,minmax(440px,1fr))}
 .three{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-svg text{fill:var(--ink2);font-size:11px}
-svg .grid line{stroke:var(--grid)}
-svg .axis{stroke:var(--axis)}
-.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:4px 0 6px;flex-wrap:wrap}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-.tt{position:fixed;pointer-events:none;background:var(--ink);color:var(--plane);padding:6px 9px;border-radius:6px;font-size:12px;z-index:50;display:none;max-width:280px;line-height:1.35}
+svg text{fill:var(--ink2);font-size:11px;font-family:"Public Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+svg .grid line{stroke:var(--rule-2)}
+svg .axis{stroke:var(--rule)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:4px 0 8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.tt{position:fixed;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;border-radius:var(--radius);font-size:12px;z-index:50;display:none;max-width:300px;line-height:1.4;font-variant-numeric:tabular-nums}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
-th{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+th{font-size:12px;color:var(--ink2);font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:var(--paper);box-shadow:inset 0 -1px 0 var(--rule)}
 th.on{color:var(--ink)}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-tr.row:hover td{background:color-mix(in srgb,var(--s1) 7%,transparent)}
+tr.row:hover td{background:#F7F8FA}
 tr.click{cursor:pointer}
-.tw{overflow:auto;max-height:70vh;border:1px solid var(--grid);border-radius:8px}
-.bar{height:8px;border-radius:4px;background:var(--seq400);display:inline-block;vertical-align:middle}
-.hbars .r{display:grid;grid-template-columns:minmax(90px,170px) 1fr 90px;gap:10px;align-items:center;padding:4px 0;font-size:13px}
-.hbars .r .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
-.hbars .r .trk{height:14px;background:transparent;position:relative}
-.hbars .r .trk i{position:absolute;left:0;top:0;height:100%;background:var(--seq400);border-radius:0 4px 4px 0;min-width:2px}
+.tw{overflow:auto;max-height:70vh;border:1px solid var(--rule);border-radius:var(--radius)}
+.hbars .r{display:grid;grid-template-columns:minmax(90px,180px) 1fr 110px;gap:12px;align-items:center;padding:5px 0;font-size:13px;border-bottom:1px solid var(--rule-2)}
+.hbars .r:last-child{border-bottom:0}
+.hbars .r .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.hbars .r .trk{height:12px;position:relative;background:var(--field);border-radius:2px}
+.hbars .r .trk i{position:absolute;left:0;top:0;height:100%;background:var(--seq400);border-radius:2px;min-width:2px}
 .hbars .r .val{text-align:right;font-variant-numeric:tabular-nums}
 .hbars .r:hover .trk i{background:var(--seq600)}
-.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;color:var(--ink2);font-size:12.5px;flex-wrap:wrap}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px;color:var(--ink2);font-size:12.5px;flex-wrap:wrap}
 .muted{color:var(--muted)}
 .small{font-size:12px}
-.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--border);color:var(--ink2);margin-left:4px}
-.pill.pri{border-color:var(--s1);color:var(--s1)}
-.pill.gen{border-color:var(--s2);color:var(--s2)}
-.pill.ret{border-color:var(--crit);color:var(--crit)}
-.drawer{position:fixed;top:0;right:0;width:min(560px,100%);height:100%;background:var(--surface);border-left:1px solid var(--border);box-shadow:-10px 0 30px rgba(0,0,0,.15);z-index:40;transform:translateX(100%);transition:transform .2s;overflow:auto;padding:18px}
+.pill{display:inline-block;white-space:nowrap;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--rule);color:var(--ink2);margin-left:6px;font-weight:500;vertical-align:1px}
+.pill.ret{border-color:#E8B4B2;color:var(--crit);background:#FDF3F2}
+.drawer{position:fixed;top:0;right:0;width:min(580px,100%);height:100%;background:var(--paper);border-left:1px solid var(--rule);box-shadow:-16px 0 40px rgba(26,31,43,.14);z-index:40;transform:translateX(100%);transition:transform .18s;overflow:auto;padding:22px 24px}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
 .drawer.open{transform:none}
-.drawer h2{margin:0 0 4px;font-size:18px}
-.drawer .x{position:absolute;top:10px;right:12px}
-.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13px;margin:10px 0}
-.kv div:nth-child(odd){color:var(--muted)}
-.loading{padding:60px;text-align:center;color:var(--ink2)}
-.prog{height:6px;background:var(--grid);border-radius:3px;max-width:360px;margin:12px auto;overflow:hidden}
-.prog i{display:block;height:100%;background:var(--s1);width:0;transition:width .2s}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--plane);padding:8px 14px;border-radius:8px;font-size:13px;display:none;z-index:60}
-.inline-in{width:90px;background:var(--plane);border:1px solid var(--border);border-radius:6px;padding:3px 6px;height:26px}
-.src{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.5}
-@media (max-width:700px){.f.search input{min-width:160px}.hbars .r{grid-template-columns:minmax(80px,120px) 1fr 80px}}
+.drawer h2{margin:0 0 4px;font-size:20px;letter-spacing:-.02em;padding-right:80px}
+.drawer .x{position:absolute;top:14px;right:16px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13px;margin:14px 0}
+.kv div:nth-child(odd){color:var(--ink2)}
+.loading{padding:80px 20px;text-align:center;color:var(--ink2)}
+.prog{height:4px;background:var(--rule);border-radius:2px;max-width:360px;margin:14px auto;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--gold);width:0;transition:width .2s}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 14px;border-radius:var(--radius);font-size:13px;display:none;z-index:60}
+.inline-in{width:86px;background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius);padding:2px 6px;height:24px;font-size:12px}
+.src{font-size:12px;color:var(--muted);margin-top:22px;line-height:1.55;max-width:110ch}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;padding:14px 16px;min-width:0}
+  .tabs{flex-direction:row;overflow-x:auto;gap:4px;margin-top:10px}
+  .tabs button{border-left:0;border-bottom:2px solid transparent;white-space:nowrap;padding:6px 8px}
+  .tabs button[aria-selected="true"]{border-bottom-color:var(--gold);background:none}
+  .tabs button[data-tab="field"]{margin:0;padding-top:6px;border-top:0;margin-left:auto}
+  .fresh{display:none}
+  .top,main{padding-left:16px;padding-right:16px}
+  .f.search input{min-width:180px}
+  .hbars .r{grid-template-columns:minmax(80px,120px) 1fr 90px}
+  .two{grid-template-columns:1fr}
+}
+.brief{background:var(--paper);border:1px solid var(--rule);border-left:3px solid var(--gold);border-radius:var(--radius);padding:14px 18px;margin-bottom:14px}
+.brief-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brief-h h3{margin:0;font-size:15px;font-weight:600}
+.brief-h .btn{margin-left:auto}
+.brief p{margin:8px 0 0;max-width:95ch;line-height:1.6;font-size:14px}
+.segs{display:flex;gap:4px;margin:14px 0;border-bottom:1px solid var(--rule)}
+.seg{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;color:var(--ink2);cursor:pointer;font-size:13.5px;margin-bottom:-1px}
+.seg.on{color:var(--ink);border-bottom-color:var(--gold);font-weight:600}
+@media print{.rail,.filters,.actions,.chips,.segs,.pager,.brief-h .btn{display:none}.app{grid-template-columns:1fr}.top{padding:0 0 10px;border:0}main{padding:0}.card,.kpis,.brief{break-inside:avoid;border-color:#ccc}.tw{max-height:none;overflow:visible}body{background:#fff}}
 </style>
 </head>
 <body>
-<header>
+<div class="app">
+<aside class="rail">
+  <div class="brand">Governor Pulse<small>Georgia 2026 campaign finance</small></div>
+  <div class="cand-wrap"><label class="rl" for="cand">Committee</label><select id="cand" title="Choose a candidate committee"></select></div>
+  <nav class="tabs" role="tablist" id="tabs" aria-label="Sections">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="donors">Top donors</button>
+    <button role="tab" data-tab="intel">Donor intelligence</button>
+    <button role="tab" data-tab="contribs">Contributions</button>
+    <button role="tab" data-tab="spending">Spending</button>
+    <button role="tab" data-tab="geo">Geography</button>
+    <button role="tab" data-tab="work">Employers &amp; occupations</button>
+    <button role="tab" data-tab="reports">Reports, refunds &amp; loans</button>
+    <button role="tab" data-tab="field">Compare the field</button>
+  </nav>
+  <div class="fresh" id="fresh">Loading data…</div>
+</aside>
+<div class="content">
+<header class="top">
   <div class="hd">
     <div>
-      <h1 id="title">Georgia Governor 2026 — Contribution Explorer</h1>
+      <h1 id="title">Georgia Governor 2026</h1>
       <div class="sub" id="subtitle">Loading…</div>
     </div>
-    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="cand" class="btn" style="max-width:320px;font-weight:600;color:var(--ink)" title="Choose a candidate committee"></select>
+    <div class="actions">
       <button class="btn" id="copyCsv" title="Copy the currently filtered contributions as CSV">Copy filtered CSV</button>
       <button class="btn" id="reset">Clear filters</button>
     </div>
   </div>
-  <div class="tabs" role="tablist" id="tabs">
-    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
-    <button role="tab" data-tab="donors">Top donors</button>
-    <button role="tab" data-tab="contribs">Contributions</button>
-    <button role="tab" data-tab="geo">Geography</button>
-    <button role="tab" data-tab="work">Employers &amp; occupations</button>
-    <button role="tab" data-tab="reports">Reports, returns &amp; loans</button>
-    <button role="tab" data-tab="field" style="margin-left:auto;color:var(--accent)">⇄ Compare the field</button>
-  </div>
   <div class="filters" id="filters">
-    <div class="f search"><label>Search donor / employer / occupation / city / zip</label><input id="q" placeholder="e.g. Emory, Attorney, 30309, Smith"></div>
-    <div class="f"><label>From</label><input type="date" id="from"></div>
-    <div class="f"><label>To</label><input type="date" id="to"></div>
-    <div class="f"><label>Election</label><select id="etype"><option value="">All</option></select></div>
-    <div class="f"><label>Contribution kind</label><select id="kind"><option value="">All kinds</option><option value="item">Itemized</option><option value="unit">Unitemized (small-dollar)</option><option value="inkind">In-kind</option><option value="ret">Returned / refunds</option></select></div>
-    <div class="f"><label>Contributor type</label><select id="ctype"><option value="">All</option></select></div>
-    <div class="f"><label>State</label><select id="state"><option value="">All</option><option value="__GA">Georgia only</option><option value="__OUT">Out of state</option></select></div>
-    <div class="f"><label>Amount min</label><input type="number" id="amin" placeholder="0"></div>
-    <div class="f"><label>Amount max</label><input type="number" id="amax" placeholder="any"></div>
-    <div class="f"><label>Report</label><select id="report"><option value="">All reports</option></select></div>
+    <div class="f search"><label for="q">Search donor, employer, occupation, city or ZIP</label><input id="q" placeholder="e.g. Emory, Attorney, 30309, Smith"></div>
+    <div class="f"><label for="from">From</label><input type="date" id="from"></div>
+    <div class="f"><label for="to">To</label><input type="date" id="to"></div>
+    <div class="f"><label for="etype">Election</label><select id="etype"><option value="">All</option></select></div>
+    <div class="f"><label for="kind">Contribution kind</label><select id="kind"><option value="">All kinds</option><option value="item">Itemized</option><option value="unit">Unitemized (small-dollar)</option><option value="inkind">In-kind</option><option value="ret">Returned / refunds</option></select></div>
+    <div class="f"><label for="ctype">Contributor type</label><select id="ctype"><option value="">All</option></select></div>
+    <div class="f"><label for="state">State</label><select id="state"><option value="">All</option><option value="__GA">Georgia only</option><option value="__OUT">Out of state</option></select></div>
+    <div class="f"><label for="amin">Amount min</label><input type="number" id="amin" placeholder="0"></div>
+    <div class="f"><label for="amax">Amount max</label><input type="number" id="amax" placeholder="any"></div>
+    <div class="f"><label for="report">Report</label><select id="report"><option value="">All reports</option></select></div>
   </div>
   <div class="chips" id="chips"></div>
 </header>
-<main id="main"><div class="loading">Loading 260k contributions…<div class="prog"><i id="pbar"></i></div><div class="small muted" id="ptext"></div></div></main>
+<main id="main"><div class="loading">Loading…<div class="prog"><i id="pbar"></i></div><div class="small muted" id="ptext"></div></div></main>
+</div></div>
 <div class="tt" id="tt"></div>
 <div class="drawer" id="drawer"><button class="btn x" id="dclose">Close</button><div id="dbody"></div></div>
 <div class="toast" id="toast"></div>
@@ -207,8 +258,10 @@ async function load(id){
   let mn=1e9,mx=-1e9;for(let i=0;i<N;i++){const d=D.det.day[i];if(d<mn)mn=d;if(d>mx)mx=d;}for(let i=0;i<UN;i++){const d=D.unit.day[i];if(d<mn)mn=d;if(d>mx)mx=d;}
   D.minDay=mn;D.maxDay=mx;
   $('#from').min=isoStr(mn);$('#from').max=isoStr(mx);$('#to').min=isoStr(mn);$('#to').max=isoStr(mx);
-  $('#title').textContent=`${D.meta.committee} — Contribution Explorer`;
-  $('#subtitle').textContent=`${D.meta.candidate} (${D.meta.party}) · Governor 2026 · ${fmtN(N+UN)} transactions from ${dayStr(mn)} to ${dayStr(mx)} · source: Georgia Campaign Finance Commission (PeachFile), extracted ${D.meta.extractedAsOf}${D.meta.apiRowsAdded?` + ${D.meta.apiRowsAdded} live filings through ${D.meta.apiPulledAt}`:''}`;
+  $('#title').textContent=D.meta.committee;
+  const partyName={DEM:'Democrat',REP:'Republican',LIB:'Libertarian',OTH:'Independent / other',NON:'Nonpartisan'}[D.meta.party]||D.meta.party;
+  D.meta._sub=`${D.meta.candidate}, ${partyName}. ${fmtN(N+UN)} transactions filed from ${dayStr(mn)} through ${dayStr(mx)}.`;$('#subtitle').textContent=D.meta._sub;
+  $('#fresh').innerHTML=`<b>Data as of ${esc(D.meta.extractedAsOf)}</b><br>Georgia Campaign Finance Commission bulk files${D.meta.apiRowsAdded?`, plus ${fmtN(D.meta.apiRowsAdded)} filings received through ${esc(D.meta.apiPulledAt)}`:''}.<div class="by">Prepared by Cura Consulting Group</div>`;
   // reset select options (dictionaries differ per candidate)
   for(const id2 of ['etype','ctype','report','state']){const s=$('#'+id2);const keep=[...s.options].filter(o=>o.value===''||o.value.startsWith('__'));s.innerHTML='';keep.forEach(o=>s.appendChild(o));}
   fill($('#etype'),DICT.etype);fill($('#ctype'),DICT.ctype);fill($('#report'),DICT.report);
@@ -350,7 +403,7 @@ function barsChart(el,series,cats,opts={}){
   el.querySelectorAll('rect.hit').forEach(r=>{r.addEventListener('mouseenter',()=>{const i=+r.dataset.i;showTT(`<b>${esc(cats[i])}</b><br>`+series.map(sr=>`${esc(sr.name)}: ${opts.fmt?opts.fmt(sr.values[i]):fmt$(sr.values[i])}`).join('<br>')+(series.length>1?`<br>Total: ${opts.fmt?opts.fmt(tot[i]):fmt$(tot[i])}`:'')+(opts.extra?'<br>'+opts.extra(i):''));});r.addEventListener('mouseleave',hideTT);});
 }
 function lineChart(el,xs,ys,opts={}){
-  const W=el.clientWidth||800,H=opts.h||220,m={t:14,r:12,b:30,l:60};const iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const W=el.clientWidth||800,H=opts.h||220,m={t:14,r:30,b:30,l:60};const iw=W-m.l-m.r,ih=H-m.t-m.b;
   const max=Math.max(1,...ys);const step=niceStep(max/4);const ymax=Math.ceil(max/step)*step;
   const y=v=>m.t+ih-(v/ymax)*ih;const x=i=>m.l+(xs.length>1?i/(xs.length-1):0)*iw;
   let g=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><g class="grid">`;
@@ -369,7 +422,7 @@ function lineChart(el,xs,ys,opts={}){
 function niceStep(r){const p=Math.pow(10,Math.floor(Math.log10(Math.max(1,r))));const f=r/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p;}
 function hbars(rows,opts={}){
   const max=Math.max(1,...rows.map(r=>r.total));
-  return `<div class="hbars">${rows.map(r=>`<div class="r" ${opts.click?`data-k="${esc(r.k)}" style="cursor:pointer"`:''} title="${esc(r.label)} · ${fmtN(r.n)} contributions${r.donors!==undefined?' · '+fmtN(r.donors)+' donors':''}"><div class="lab">${esc(r.label||'(blank)')}</div><div class="trk"><i style="width:${100*r.total/max}%"></i></div><div class="val">${opts.pct?r.total.toFixed(1)+'%':fmt$(r.total)}<span class="muted small"> · ${fmtN(r.n)}</span></div></div>`).join('')}</div>`;
+  return `<div class="hbars">${rows.map(r=>`<div class="r" ${opts.click?`data-k="${esc(r.k)}" style="cursor:pointer"`:''} title="${esc(r.label)} · ${fmtN(r.n)} contributions${r.donors!==undefined?' · '+fmtN(r.donors)+' donors':''}"><div class="lab">${esc(r.label||'(blank)')}</div><div class="trk"><i style="width:${100*r.total/max}%"></i></div><div class="val">${opts.pct?r.total.toFixed(1)+'%':fmt$(r.total)}<span class="muted small"> &nbsp;${fmtN(r.n)}</span></div></div>`).join('')}</div>`;
 }
 
 // ---------- render ----------
@@ -377,6 +430,7 @@ function render(){
   const main=$('#main');
   $('#filters').style.display=tab==='field'?'none':'';$('#chips').style.display=tab==='field'?'none':'';$('#copyCsv').style.visibility=tab==='field'?'hidden':'';
   if(tab==='field'){renderField(main);return;}
+  if(D&&CUR){$('#title').textContent=D.meta.committee;$('#subtitle').textContent=D.meta._sub||'';}
   if(tab==='overview')renderOverview(main);else if(tab==='donors')renderDonors(main);else if(tab==='contribs')renderContribs(main);else if(tab==='geo')renderGeo(main);else if(tab==='work')renderWork(main);else renderReports(main);
 }
 function renderOverview(main){
@@ -405,13 +459,13 @@ function renderOverview(main){
   <div class="grid kpis">
     <div class="tile"><div class="l">Gross raised</div><div class="v">${fmt$(T.gross)}</div><div class="d">${fmtN(T.n)} contributions</div></div>
     <div class="tile"><div class="l">Net of refunds</div><div class="v">${fmt$(T.net)}</div><div class="d">${fmt$(T.ret)} returned (${fmtN(T.retN)})</div></div>
-    <div class="tile"><div class="l">Itemized</div><div class="v">${fmt$(T.itemSum)}</div><div class="d">${fmtN(T.itemN)} gifts · ${pct(T.itemSum,T.gross)} of gross</div></div>
-    <div class="tile"><div class="l">Unitemized (small-dollar)</div><div class="v">${fmt$(T.unitSum)}</div><div class="d">${fmtN(T.unitN)} gifts · ${pct(T.unitSum,T.gross)} of gross</div></div>
+    <div class="tile"><div class="l">Itemized</div><div class="v">${fmt$(T.itemSum)}</div><div class="d">${fmtN(T.itemN)} gifts, ${pct(T.itemSum,T.gross)} of gross</div></div>
+    <div class="tile"><div class="l">Unitemized (small-dollar)</div><div class="v">${fmt$(T.unitSum)}</div><div class="d">${fmtN(T.unitN)} gifts, ${pct(T.unitSum,T.gross)} of gross</div></div>
     <div class="tile"><div class="l">In-kind</div><div class="v">${fmt$(T.inkind)}</div><div class="d">${fmtN(T.inkN)} items</div></div>
     <div class="tile"><div class="l">Named donors</div><div class="v">${fmtN(T.donors)}</div><div class="d">itemized, de-duplicated by name + ZIP</div></div>
     <div class="tile"><div class="l">Average / median gift</div><div class="v">${fmt$2(T.avg)}</div><div class="d">median ${fmt$2(T.med)}</div></div>
-    <div class="tile"><div class="l">Gifts under $200</div><div class="v">${pct(T.smallN,T.n)}</div><div class="d">of count · ${pct(T.small,T.gross)} of dollars</div></div>
-    <div class="tile"><div class="l">Georgia share (itemized $)</div><div class="v">${pct(ga,itemTotal)}</div><div class="d">${fmt$(ga)} GA · ${fmt$(out)} out-of-state</div></div>
+    <div class="tile"><div class="l">Gifts under $200</div><div class="v">${pct(T.smallN,T.n)}</div><div class="d">of gifts, ${pct(T.small,T.gross)} of dollars</div></div>
+    <div class="tile"><div class="l">Georgia share (itemized $)</div><div class="v">${pct(ga,itemTotal)}</div><div class="d">${fmt$(ga)} in state, ${fmt$(out)} out of state</div></div>
   </div>
   <div class="grid two" style="margin-top:12px">
     <div class="card"><h3>Monthly receipts by election</h3><div class="note">Contributions received per month (refunds excluded). Hover for counts.</div>
@@ -487,7 +541,7 @@ function renderContribs(main){
   const PS=100;const pages=Math.max(1,Math.ceil(rows.length/PS));cPage=Math.min(cPage,pages-1);const page=rows.slice(cPage*PS,(cPage+1)*PS);
   const th=(key,l,num)=>`<th class="${num?'num':''} ${cSort.k===key?'on':''}" data-k="${key}">${l}${cSort.k===key?(cSort.dir<0?' ↓':' ↑'):''}</th>`;
   const T=totals();
-  main.innerHTML=`<div class="card"><h3>All matching contributions</h3><div class="note">${fmtN(rows.length)} transactions · ${fmt$(T.gross)} gross · ${fmt$(T.net)} net of refunds. Unitemized gifts appear without donor details (that is how they are reported). Use "Copy filtered CSV" above to take this set into Excel or Sheets.</div>
+  main.innerHTML=`<div class="card"><h3>All matching contributions</h3><div class="note">${fmtN(rows.length)} transactions, ${fmt$(T.gross)} gross, ${fmt$(T.net)} net of refunds. Unitemized gifts appear without donor details (that is how they are reported). Use "Copy filtered CSV" above to take this set into Excel or Sheets.</div>
   <div class="tw"><table><thead><tr>${th('day','Date')}${th('name','Contributor')}${th('city','City')}${th('state','ST')}${th('emp','Employer / occupation')}${th('amt','Amount',1)}${th('etype','Election')}<th>Type</th><th>Report</th></tr></thead><tbody>
   ${page.map(r=>{if(r>=0){const i=r;const ret=DICT.ttype[det.ttype[i]]==='Return Contribution';return `<tr class="row click" data-i="${i}"><td>${dayStr(det.day[i])}</td><td><b>${esc(DICT.name[det.name[i]])}</b>${DICT.ctype[det.ctype[i]]&&DICT.ctype[det.ctype[i]]!=='Individual'?`<span class="pill">${esc(DICT.ctype[det.ctype[i]].split(' /')[0])}</span>`:''}</td><td>${esc(DICT.city[det.city[i]])}</td><td>${esc(DICT.state[det.state[i]])}</td><td class="small">${esc(DICT.emp[det.emp[i]])}${DICT.occ[det.occ[i]]?`<div class="muted">${esc(DICT.occ[det.occ[i]])}</div>`:''}</td><td class="num" ${ret?'style="color:var(--crit)"':''}>${fmt$2(det.cents[i]/100)}</td><td>${esc(DICT.etype[det.etype[i]])}</td><td class="small">${ret?'Refund':esc(DICT.sub[det.sub[i]])}${DICT.desc[det.desc[i]]?`<div class="muted">${esc(DICT.desc[det.desc[i]])}</div>`:''}</td><td class="small">${esc(DICT.report[det.report[i]])}</td></tr>`;}
     else{const i=-r-1;const ret=DICT.ttype[un.ttype[i]]==='Return Contribution';return `<tr class="row"><td>${dayStr(un.day[i])}</td><td class="muted">Unitemized donor</td><td></td><td></td><td></td><td class="num" ${ret?'style="color:var(--crit)"':''}>${fmt$2(un.cents[i]/100)}</td><td>${esc(DICT.etype[un.etype[i]])}</td><td class="small">${ret?'Refund':'Unitemized'}</td><td class="small">${esc(DICT.report[un.report[i]])}</td></tr>`;}}).join('')}
@@ -511,8 +565,8 @@ function renderGeo(main){
   const gaCities=byCity.filter(r=>r.label.endsWith(', GA')).slice(0,15);
   main.innerHTML=`
   <div class="grid kpis">
-    <div class="tile"><div class="l">Georgia donors</div><div class="v">${fmtN(ga.donors)}</div><div class="d">${fmt$(ga.total)} · ${pct(ga.total,tot)} of itemized $</div></div>
-    <div class="tile"><div class="l">Out-of-state</div><div class="v">${fmt$(tot-ga.total)}</div><div class="d">${pct(tot-ga.total,tot)} of itemized $ · ${fmtN(byState.length-1)} states/territories</div></div>
+    <div class="tile"><div class="l">Georgia donors</div><div class="v">${fmtN(ga.donors)}</div><div class="d">${fmt$(ga.total)}, ${pct(ga.total,tot)} of itemized dollars</div></div>
+    <div class="tile"><div class="l">Out-of-state</div><div class="v">${fmt$(tot-ga.total)}</div><div class="d">${pct(tot-ga.total,tot)} of itemized dollars from ${fmtN(byState.length-1)} states and territories</div></div>
     <div class="tile"><div class="l">Top out-of-state</div><div class="v">${esc((byState.filter(r=>r.label!=='GA')[0]||{label:'—'}).label)}</div><div class="d">${fmt$((byState.filter(r=>r.label!=='GA')[0]||{total:0}).total)}</div></div>
     <div class="tile"><div class="l">ZIP codes represented</div><div class="v">${fmtN(byZip.length)}</div><div class="d">itemized donors</div></div>
   </div>
@@ -575,7 +629,7 @@ function renderReports(main){
   <div class="grid two" style="margin-top:12px">
     <div class="card"><h3>Refunds &amp; returned contributions</h3><div class="note">${fmtN(refunds.length)} itemized refunds (${fmt$(refunds.reduce((s,i)=>s+det.cents[i]/100,0))}) plus ${fmtN(unitRefN)} unitemized refunds (${fmt$(unitRef)}) within current filters.</div>
       <div class="tw" style="max-height:420px"><table><thead><tr><th>Date</th><th>Contributor</th><th class="num">Amount</th><th>Note</th></tr></thead><tbody>${refunds.slice(0,200).map(i=>`<tr><td>${dayStr(det.day[i])}</td><td>${esc(DICT.name[det.name[i]])}<div class="small muted">${esc(DICT.city[det.city[i]])}${DICT.state[det.state[i]]?', '+DICT.state[det.state[i]]:''}</div></td><td class="num" style="color:var(--crit)">${fmt$2(det.cents[i]/100)}</td><td class="small">${esc(DICT.desc[det.desc[i]])}</td></tr>`).join('')}</tbody></table></div></div>
-    <div class="card"><h3>Candidate loans</h3><div class="note">Loans to the committee and repayments, as filed (not affected by filters). ${fmt$(recv)} received · ${fmt$(paid)} repaid · <b>${fmt$(recv-paid)} outstanding</b> per these filings. The bulk export lists each loan line twice; duplicates are collapsed here.</div>
+    <div class="card"><h3>Candidate loans</h3><div class="note">Loans to the committee and repayments, as filed (not affected by filters). ${fmt$(recv)} received, ${fmt$(paid)} repaid, <b>${fmt$(recv-paid)} outstanding</b> per these filings. The bulk export lists each loan line twice; duplicates are collapsed here.</div>
       <table><thead><tr><th>Date</th><th>Type</th><th>From / to</th><th class="num">Amount</th><th>Description</th></tr></thead><tbody>${loans.map(i=>`<tr><td>${dayStr(det.day[i])}</td><td>${esc(DICT.ttype[det.ttype[i]])}</td><td>${esc(DICT.name[det.name[i]])}</td><td class="num">${fmt$2(det.cents[i]/100)}</td><td class="small">${esc(DICT.desc[det.desc[i]])}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
 }
@@ -599,6 +653,7 @@ function multiLine(el,series,xlabels,opts={}){
 let fieldSort={k:'net',dir:-1};
 function renderField(main){
   const C=FIELD.candidates;C.forEach(c=>c.netEx=c.net-(c.selfFunding||0));
+  $('#title').textContent='The 2026 field';$('#subtitle').textContent=`${C.length} committees registered for Governor, compared on the same basis.`;
   const key=fieldSort.k;const rows=[...C].sort((a,b)=>{const va=a[key]??-Infinity,vb=b[key]??-Infinity;if(typeof va==='number'||typeof vb==='number')return ((va||0)-(vb||0))*fieldSort.dir;return (va<vb?-1:va>vb?1:0)*fieldSort.dir;});
   const th=(k,l,num)=>`<th class="${num?'num':''} ${fieldSort.k===k?'on':''}" data-k="${k}">${l}${fieldSort.k===k?(fieldSort.dir<0?' ↓':' ↑'):''}</th>`;
   const totalNet=C.reduce((s,c)=>s+c.net,0);
@@ -625,7 +680,7 @@ function renderField(main){
     <div class="card"><h3>Cumulative receipts — top 6</h3><div class="note">Running total of gross contributions by month of receipt.</div><div class="legend" id="f2leg">${series.map((s,i)=>`<span data-i="${i}" style="cursor:pointer" title="Click to hide / show"><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div><div id="f2"></div><div class="small muted">Click a name in the legend to hide or show that candidate (useful when one self-funder dominates the scale).</div></div>
   </div>
   <div class="grid two" style="margin-top:12px">
-    <div class="card"><h3>Small-dollar share</h3><div class="note">Share of gross receipts arriving as unitemized (small) contributions — a proxy for grassroots breadth.</div>${hbars([...C].filter(c=>c.gross>0).map(c=>({k:c.id,label:c.short,n:c.contributions,total:Math.round(1000*c.unitemized/c.gross)/10})).sort((a,b)=>b.total-a.total),{pct:1})}<div class="small muted">Percent of gross receipts · number of contributions.</div></div>
+    <div class="card"><h3>Small-dollar share</h3><div class="note">Share of gross receipts arriving as unitemized (small) contributions — a proxy for grassroots breadth.</div>${hbars([...C].filter(c=>c.gross>0).map(c=>({k:c.id,label:c.short,n:c.contributions,total:Math.round(1000*c.unitemized/c.gross)/10})).sort((a,b)=>b.total-a.total),{pct:1})}<div class="small muted">Percent of gross receipts, followed by the number of contributions.</div></div>
     <div class="card"><h3>Gift-size mix (dollars)</h3><div class="note">Share of gross dollars from each size band.</div>
     <table><thead><tr><th>Candidate</th><th class="num">&lt; $100</th><th class="num">$100–999</th><th class="num">$1,000–8,399</th><th class="num">$8,400+</th></tr></thead><tbody>${[...C].filter(c=>c.gross>0).sort((a,b)=>b.net-a.net).map(c=>`<tr><td>${esc(c.short)}</td>${c.bands.sums.map(s=>`<td class="num">${pct(s,c.gross)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
   </div>
@@ -653,5 +708,7 @@ async function copyCsv(){
 loadField().catch(e=>{$('#main').innerHTML=`<div class="loading">Could not load the data: ${esc(e.message)}</div>`;});
 window.addEventListener('resize',()=>{clearTimeout(window.__rz);window.__rz=setTimeout(()=>{if(D&&(tab==='overview'||tab==='field'))render();},200);});
 </script>
+<script>const BASE={renderOverview,renderGeo,renderWork,renderField,load};</script>
+<script src="app2.js"></script>
 </body>
 </html>
