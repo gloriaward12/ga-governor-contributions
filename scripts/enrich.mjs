@@ -5,8 +5,10 @@ const OUT = process.argv[2] || 'data-raw/api_enrichment.json.gz';
 const FILERS = ['Keisha for Governor','Jackson for Governor, Inc.','Burt Jones for Georgia','Brad for Governor, Inc.','Carr for Georgia, Inc.','Georgia for Jason, Inc.','Duncan for Georgia','Mike Thurmond For Governor','Committee to Elect Derrick Jackson','Clark Dean for Governor','Friends of Ruwa','Olu Brown for Governor, Inc.','Chase Oliver for Governor','Yasger, Kenneth','Gregg Kirkpatrick for Governor','Pacetti, Andrew','Project Battleground Georgia'];
 const CONCURRENCY = +(process.env.ENRICH_CONCURRENCY || 4);
 const items = new Map();
+const mdy = d => `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}/${d.getUTCFullYear()}`;
+const RECENT_FROM = mdy(new Date(Date.now() - 60 * 86400000));  // the all-source-types pass only needs the window in which new rows are added
 async function page(filer, stc, pn, st) {
-  const body = { pageNumber: pn, pageSize: 100, sortBy: 'Transaction Date', sortType: st, transactionTypeCode: 'TCON', filerName: filer, sourceName: '', transactionAmountMax: null, sourceTypeCode: stc, committeeType: '', electionID: '', reportName: '', toDate: null, fromDate: null, byState: '', electionType: '', electionYear: '', filerRegistrationGuid: null };
+  const body = { pageNumber: pn, pageSize: 100, sortBy: 'Transaction Date', sortType: st, transactionTypeCode: 'TCON', filerName: filer, sourceName: '', transactionAmountMax: null, sourceTypeCode: stc, committeeType: '', electionID: '', reportName: '', toDate: null, fromDate: stc === '' ? RECENT_FROM : null, byState: '', electionType: '', electionYear: '', filerRegistrationGuid: null };
   let last;
   for (let t = 0; t < 5; t++) {
     try {
@@ -21,7 +23,8 @@ async function page(filer, stc, pn, st) {
 const pick = i => ({ id: i.transactionId, g: i.guid, fid: i.filerEntityId, filer: i.filerName, n: i.sourceName, a: i.transactionAmount, d: i.transactionDate, sub: i.transactionSubTypeDesc, tt: i.transactionTypeCodeDescription, st: i.transactionStatusCode, et: i.electionTypeDescription, src: i.transactionSource, fn: i.payeeFirstName, ln: i.payeeLastName, mn: i.payeeMiddleName, a1: i.transactionSourceAddressLine1, city: i.transactionSourceCity, state: i.transactionSourceStateCode, zip: i.transactionSourceZipcode, occ: i.payeeOccupation, emp: i.payeeEmployer, rep: i.reportName, timed: i.timedReport });
 // the API's date sort is not stable across pages, so each (filer, source type) is paged in both directions and the results unioned
 const tasks = [];
-for (const f of FILERS) for (const stc of ['TIND', 'TBSN', 'TNCC']) for (const st of ['desc', 'asc']) tasks.push({ f, stc, st });
+// three typed passes cover occupation/employer enrichment; the untyped pass ('' = every source type, incl. TCNCC candidate-committee transfers and TSELF) covers recent filings only
+for (const f of FILERS) for (const stc of ['TIND', 'TBSN', 'TNCC', '']) for (const st of ['desc', 'asc']) tasks.push({ f, stc, st });
 let next = 0, done = 0;
 async function worker() {
   while (next < tasks.length) {
@@ -33,7 +36,7 @@ async function worker() {
       if (d.items.length < 100 || pn * 100 >= d.totalItems) break;
       pn++;
     }
-    done++; console.log(`[${done}/${tasks.length}] ${f} ${stc} ${st}: ${total} rows (${items.size} unique so far)`);
+    done++; console.log(`[${done}/${tasks.length}] ${f} ${stc || 'all-recent'} ${st}: ${total} rows (${items.size} unique so far)`);
   }
 }
 const t0 = Date.now();
