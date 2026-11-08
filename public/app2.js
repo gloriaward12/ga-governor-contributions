@@ -626,6 +626,7 @@ async function load(id) {
   if (state.q) apply();
 }
 // accept the new tab names in the hash
-(function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending|pbg)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } })();
+(function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending|pbg|donors)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); }
+  const qp = new URLSearchParams(location.search).get('q'); if (qp) { const qi = $('#q'); if (qi) { qi.value = qp; state.q = qp.toLowerCase(); } } })();
 // if the base page already finished loading before this script arrived (cached data), re-render with the extended views
-if (typeof D !== 'undefined' && D && D.det) { extendSearch(); render(); }
+if (typeof D !== 'undefined' && D && D.det) { extendSearch(); if (state.q) apply(); else render(); }

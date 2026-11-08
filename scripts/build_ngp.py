@@ -146,6 +146,14 @@ for e in events:
                 cands.append(dict(vanid=int(vid), name=r['name'], gave=round(float(r['total']), 2), atEvent=bool(vid in att_v)))
     cands.sort(key=lambda c: (-c['atEvent'], -c['gave']))
     e['hostCandidates'] = cands[:6]
+lifetime = agg['total']
+for e in events:
+    g = bycode.get_group(e['code']) if e['code'] in bycode.groups else None
+    e['gifts'] = []
+    if g is not None:
+        for _, r in g.sort_values('net', ascending=False).iterrows():
+            e['gifts'].append(dict(v=int(r['VANID']), name=r['Contact Name'], city=r['Home City'], state=r['Home State/Province'], emp=r['Employer'], occ=r['Occupation'],
+                                   amt=round(float(r['net']), 2), day=int(r['day']), ft=bool(r['first_time']), life=round(float(lifetime.get(r['VANID'], 0)), 2)))
 events.sort(key=lambda e: (e['date'] or 0))
 
 # ---- hosts rollup ---------------------------------------------------------------------------------
