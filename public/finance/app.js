@@ -100,11 +100,11 @@ function render() {
 
 (async () => {
   try {
-    FIELD = await loadJSON('../data/field.json');
+    FIELD = await loadJSON('/data/field.json');
     const v = encodeURIComponent(FIELD.generated || '');
-    const [camp, lead] = await Promise.all([loadJSON(`../data/cand-${CAMP}.json?v=${v}`), loadJSON(`../data/cand-${LEAD}.json?v=${v}`)]);
+    const [camp, lead] = await Promise.all([loadJSON(`/data/cand-${CAMP}.json?v=${v}`), loadJSON(`/data/cand-${LEAD}.json?v=${v}`)]);
     DONORS = build(records(camp, CAMP), records(lead, LEAD));
-    try { const S = await loadJSON('salary.json'); const byKey = new Map(S.matches.map(m => [m.key + '|GA', m])); for (const r of DONORS) { const m = byKey.get(r.k); if (m) { r.salary = m.salary; r.salaryTitle = m.title; r.salaryOrg = m.org; r.salaryConf = m.confidence; r.givingPct = r.total / m.salary; } } SALARY_META = S; } catch (e) { console.warn('salary file not loaded', e); }
+    try { const S = await loadJSON('/finance/salary.json'); const byKey = new Map(S.matches.map(m => [m.key + '|GA', m])); for (const r of DONORS) { const m = byKey.get(r.k); if (m) { r.salary = m.salary; r.salaryTitle = m.title; r.salaryOrg = m.org; r.salaryConf = m.confidence; r.givingPct = r.total / m.salary; } } SALARY_META = S; } catch (e) { console.warn('salary file not loaded', e); }
     render();
   } catch (e) { $('#main').innerHTML = `<div class="loading">Could not load donor data: ${esc(e.message)}</div>`; }
 })();
