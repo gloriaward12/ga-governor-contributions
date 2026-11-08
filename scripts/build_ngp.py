@@ -145,8 +145,8 @@ for e in events:
     h = e['host'] or '(no host named)'
     o = hosts.setdefault(h, dict(host=h, events=0, raised=0, donors=0, firstTime=0, codes=[], gave=None, gaveName=None))
     o['events'] += 1; o['raised'] += e['amt']; o['donors'] += e['donors']; o['firstTime'] += e['firstTime']; o['codes'].append(e['code'])
-    best = next((c for c in e['hostCandidates'] if c['atEvent']), None) or (e['hostCandidates'][0] if e['hostCandidates'] else None)
-    if best and (o['gave'] is None or best['atEvent']): o['gave'] = best['gave']; o['gaveName'] = best['name']
+    best = next((c for c in e['hostCandidates'] if c['atEvent']), None)
+    if best and o['gave'] is None: o['gave'] = best['gave']; o['gaveName'] = best['name']
 hosts = sorted(hosts.values(), key=lambda h: -h['raised'])
 
 # ---- channels, source codes, months -----------------------------------------------------------
