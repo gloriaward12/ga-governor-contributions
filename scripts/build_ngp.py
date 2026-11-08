@@ -12,6 +12,8 @@ import pandas as pd, numpy as np
 args = [a for a in sys.argv[1:]]
 PBG = None
 if '--pbg' in args: i = args.index('--pbg'); PBG = args[i + 1]; del args[i:i + 2]
+PBG_FILED = None
+if '--pbg-filed' in args: i = args.index('--pbg-filed'); PBG_FILED = args[i + 1]; del args[i:i + 2]
 SRC, EVF = args[0], args[1]
 COMM = args[2] if len(args) > 2 else None
 OUT = 'public/finance/ngp.json'
@@ -146,6 +148,27 @@ for e in events:
                 cands.append(dict(vanid=int(vid), name=r['name'], gave=round(float(r['total']), 2), atEvent=bool(vid in att_v)))
     cands.sort(key=lambda c: (-c['atEvent'], -c['gave']))
     e['hostCandidates'] = cands[:6]
+# ---- Battleground as filed with the Commission (until its NGP export arrives) ------------------
+def nk(name):
+    name = str(name or '')
+    if ',' in name: last, first = name.split(',', 1)
+    else: last, first = name, ''
+    norm = lambda x: re.sub(r'[^a-z]', '', x.lower())
+    return norm(last) + '|' + norm(first)[:5]
+pbg_filed = {}
+if PBG_FILED:
+    K = json.load(open(PBG_FILED)); dd, dt_ = K['dict'], K['det']
+    con, ret = dd['ttype'].index('Contribution'), dd['ttype'].index('Return Contribution'); xfer = dd['ctype'].index('Candidate / Candidate Committee')
+    for i in range(len(dt_['tid'])):
+        t = dt_['ttype'][i]
+        if t not in (con, ret) or dt_['ctype'][i] == xfer: continue
+        key = (nk(dd['name'][dt_['name'][i]]), dd['state'][dt_['state'][i]] or '')
+        o = pbg_filed.setdefault(key, dict(total=0.0, n=0, last=-1))
+        o['total'] += dt_['cents'][i] / 100
+        if t == con: o['n'] += 1; o['last'] = max(o['last'], dt_['day'][i])
+def filed_for(name, state):
+    o = pbg_filed.get((nk(name), str(state or ''))); return round(o['total'], 2) if o else 0.0
+
 lifetime = agg['total']
 for e in events:
     g = bycode.get_group(e['code']) if e['code'] in bycode.groups else None
@@ -153,7 +176,21 @@ for e in events:
     if g is not None:
         for _, r in g.sort_values('net', ascending=False).iterrows():
             e['gifts'].append(dict(v=int(r['VANID']), name=r['Contact Name'], city=r['Home City'], state=r['Home State/Province'], emp=r['Employer'], occ=r['Occupation'],
-                                   amt=round(float(r['net']), 2), day=int(r['day']), ft=bool(r['first_time']), life=round(float(lifetime.get(r['VANID'], 0)), 2)))
+                                   amt=round(float(r['net']), 2), day=int(r['day']), ft=bool(r['first_time']), life=round(float(lifetime.get(r['VANID'], 0)), 2),
+                                   pbg=filed_for(r['Contact Name'], r['Home State/Province'])))
+    seen_v = set(); e['pbgAmt'] = 0.0; e['pbgDonors'] = 0
+    for g in e['gifts']:
+        if g['v'] in seen_v: continue
+        seen_v.add(g['v'])
+        if g['pbg'] > 0: e['pbgAmt'] += g['pbg']; e['pbgDonors'] += 1
+    e['pbgAmt'] = round(e['pbgAmt'], 2)
+    seen_v = set(); e['roomCamp'] = 0.0; e['hostLevel'] = 0
+    tier = max(2500, e['max'] * 0.5)
+    for g in e['gifts']:
+        if g['amt'] >= tier: e['hostLevel'] += 1
+        if g['v'] in seen_v: continue
+        seen_v.add(g['v']); e['roomCamp'] += g['life']
+    e['roomCamp'] = round(e['roomCamp'], 2); e['roomTotal'] = round(e['roomCamp'] + e['pbgAmt'], 2)
 events.sort(key=lambda e: (e['date'] or 0))
 
 # ---- hosts rollup ---------------------------------------------------------------------------------
@@ -225,10 +262,11 @@ for vid, r in keep.iterrows():
                        total=round(float(r['total']), 2), n=int(r['n']), first=int(r['first']), last=int(r['last']), max=round(float(r['mx']), 2),
                        pri=round(float(r['pri']), 2), gen=round(float(r['gen']), 2), events=r['events'] if isinstance(r['events'], list) else [],
                        ch=r['topChannel'], rec=bool(r['recurring']),
-                       lead=round(float((pb_by_vid.get(int(vid)) if int(vid) in pb_by_vid else pb_by_name.get((str(r['name']).lower(), str(r['state'])), {'total': 0}))['total']), 2)))
+                       lead=round(float((pb_by_vid.get(int(vid)) if int(vid) in pb_by_vid else pb_by_name.get((str(r['name']).lower(), str(r['state'])), {'total': 0}))['total']), 2),
+                       pbgFiled=filed_for(r['name'], r['state'])))
 
 out = dict(generated=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC'), asof=int(mon['day'].max()), rows=int(len(mon)), total=round(float(mon['net'].sum()), 2),
            donors=int(mon['VANID'].nunique()), recurring=int(len(rec)), recurringAmt=round(float(mon[mon['VANID'].isin(rec)]['net'].sum()), 2),
-           tiers=tiers, channels=channels, codes=codes, months=months, events=events, hosts=hosts, recon=recon, pbg=pbg, list=donors)
+           tiers=tiers, channels=channels, codes=codes, months=months, events=events, hosts=hosts, recon=recon, pbg=pbg, pbgFiled=bool(pbg_filed), list=donors)
 json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
 print('events', len(events), 'hosts', len(hosts), 'donors listed', len(donors), 'bytes', len(open(OUT).read()))
