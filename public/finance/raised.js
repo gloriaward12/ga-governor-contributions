@@ -1,0 +1,111 @@
+// Finance: who raised what. Built from the NGP VAN contribution export (source codes) joined to the events list.
+const $ = s => document.querySelector(s);
+const fmt$ = v => (v < 0 ? '-' : '') + '$' + Math.round(Math.abs(v)).toLocaleString();
+const fmtK = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + Math.round(v / 1e3) + 'K' : fmt$(v);
+const fmtN = v => Math.round(v).toLocaleString();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const EPOCH = Date.UTC(2025, 0, 1);
+const dayStr = d => { if (d == null) return '—'; const t = new Date(EPOCH + d * 86400000); return `${String(t.getUTCMonth() + 1).padStart(2, '0')}/${String(t.getUTCDate()).padStart(2, '0')}/${t.getUTCFullYear()}`; };
+const monLabel = m => { const [y, mo] = m.split('-'); return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+mo - 1] + ' ' + y.slice(2); };
+const toast = m => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', 2200); };
+const LIMIT = 8400;
+let D, view = 'events', sortK = 'amt', sortDir = -1, q = '', page = 0;
+
+const VIEWS = {
+  events: { label: 'Events', note: 'Each fundraiser with the money NGP attributes to its source code. <b>First-time</b> is donors whose first gift ever to the campaign came through this event. <b>Confirmed</b> is the RSVP count from the events list; events found only in the contributions (no events-list entry) are marked. Host matches are by surname against attendees and large donors: a lead to verify, not a fact.' },
+  hosts: { label: 'Hosts', note: 'Hosts rolled up across their events: what their rooms raised against what they gave themselves. The ratio is the "worked to bring others in" signal the finance team asked for. Where no host is named the event code carried only a place or a program.' },
+  channels: { label: 'Channels and codes', note: 'Every source code in the export, grouped into channels. "Uncoded online" is ActBlue money that arrived with a Placeholder or blank code, most of it in October; those gifts are real but cannot be credited to a page or a person.' },
+  donors: { label: 'Donors', note: 'Donors at $250 and up lifetime, plus everyone who gave through an event. <b>Raised</b> appears for donors matched as event hosts. Recurring means three or more gifts of the same amount about a month apart.' },
+  recon: { label: 'Books vs filings', note: 'NGP (the campaign’s books, through the export date) against the Commission filings (what the public sees, through the last filed day). Months should agree once the next filing lands; the Commission line includes in-kind, so the comparison uses NGP’s all-types total.' }
+};
+
+async function load() { const r = await fetch('/finance/ngp.json', { cache: 'no-cache' }); if (!r.ok) throw new Error(`ngp.json: ${r.status}`); return r.json(); }
+
+function prep() {
+  const hostOf = new Map();
+  for (const e of D.events) for (const c of e.hostCandidates) if (c.atEvent) hostOf.set(c.vanid, (hostOf.get(c.vanid) || 0) + e.amt);
+  for (const r of D.list) { r.raised = hostOf.get(r.v) || 0; r.maxed = r.pri >= LIMIT || r.gen >= LIMIT; r.evn = r.events.length; r.recency = D.asof - r.last; }
+  for (const h of D.hosts) h.ratio = h.gave ? h.raised / h.gave : null;
+  for (const e of D.events) { e.perConfirmed = e.confirmed ? e.amt / e.confirmed : null; e.avg = e.donors ? e.amt / e.donors : 0; }
+}
+
+function sortRows(rows, k, dir) { return [...rows].sort((a, b) => { const va = a[k], vb = b[k]; if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1; if (typeof va === 'number') return (va - vb) * dir; return (String(va).toLowerCase() < String(vb).toLowerCase() ? -1 : 1) * dir; }); }
+const th = (k, l, num) => `<th class="${num ? 'num' : ''} ${sortK === k ? 'on' : ''}" data-k="${k}">${l}${sortK === k ? (sortDir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+const tile = (l, v, d) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+const filt = (rows, fields) => { if (!q) return rows; const toks = q.toLowerCase().split(/\s+/).filter(Boolean); return rows.filter(r => { const hay = fields.map(f => r[f]).join(' ').toLowerCase(); return toks.every(t => hay.includes(t)); }); };
+let CSV = null;
+
+function body() {
+  const PS = 60;
+  if (view === 'events') {
+    let rows = filt(D.events, ['name', 'code', 'host', 'location']); rows = sortRows(rows, sortK, sortDir);
+    CSV = { head: ['Date', 'Event', 'Location', 'Source code', 'Host', 'On events list', 'Invited', 'Confirmed', 'Raised', 'Gifts', 'Donors', 'First-time donors', 'Largest gift', 'Georgia share', 'Host match', 'Host gave'], rows: rows.map(e => [dayStr(e.date), e.name, e.location, e.code, e.host, e.listed ? 'yes' : 'no', e.invited, e.confirmed, e.amt.toFixed(2), e.n, e.donors, e.firstTime, e.max.toFixed(2), e.ga == null ? '' : (e.ga * 100).toFixed(0) + '%', e.hostCandidates[0]?.name || '', e.hostCandidates[0]?.gave ?? '']) };
+    const tot = rows.reduce((s, e) => s + e.amt, 0);
+    return `<div class="bar"><input type="search" id="q" placeholder="Search event, host, code or place" value="${esc(q)}"><button class="btn" id="csv">Copy as CSV</button><span class="small muted">${fmtN(rows.length)} events, ${fmt$(tot)}</span></div>
+    <div class="tw"><table><thead><tr>${th('date', 'Date')}${th('name', 'Event')}${th('host', 'Host')}${th('amt', 'Raised', 1)}${th('donors', 'Donors', 1)}${th('firstTime', 'First-time', 1)}${th('confirmed', 'Confirmed', 1)}${th('perConfirmed', 'Per confirmed', 1)}${th('max', 'Largest', 1)}<th>Host gave</th></tr></thead><tbody>
+    ${rows.map(e => `<tr><td class="num" style="text-align:left;white-space:nowrap">${dayStr(e.date)}</td><td><b>${esc(e.name)}</b>${e.listed ? '' : '<span class="pill">code only</span>'}${e.n === 0 ? '<span class="pill hot">no gifts coded</span>' : ''}<div class="small muted">${esc(e.location)}${e.location ? ' · ' : ''}<code>${esc(e.code)}</code></div></td><td>${esc(e.host) || '<span class="muted">—</span>'}</td><td class="num"><b>${fmt$(e.amt)}</b></td><td class="num">${fmtN(e.donors)}</td><td class="num">${fmtN(e.firstTime)}</td><td class="num">${e.confirmed ? fmtN(e.confirmed) : '<span class="muted">—</span>'}</td><td class="num">${e.perConfirmed ? fmt$(e.perConfirmed) : '<span class="muted">—</span>'}</td><td class="num">${fmt$(e.max)}</td><td class="small">${e.hostCandidates.length ? e.hostCandidates.slice(0, 2).map(c => `${esc(c.name)} <b>${fmt$(c.gave)}</b>${c.atEvent ? '' : ' <span class="muted">(not at event)</span>'}`).join('<br>') : '<span class="muted">no match</span>'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  if (view === 'hosts') {
+    let rows = filt(D.hosts.filter(h => h.host !== '(no host named)'), ['host', 'gaveName']); rows = sortRows(rows, sortK === 'amt' ? 'raised' : sortK, sortDir);
+    CSV = { head: ['Host', 'Events', 'Raised', 'Donors', 'First-time donors', 'Matched donor', 'Gave', 'Raised per $ given', 'Source codes'], rows: rows.map(h => [h.host, h.events, h.raised.toFixed(2), h.donors, h.firstTime, h.gaveName || '', h.gave ?? '', h.ratio ? h.ratio.toFixed(1) : '', h.codes.join(' ')]) };
+    return `<div class="bar"><input type="search" id="q" placeholder="Search host" value="${esc(q)}"><button class="btn" id="csv">Copy as CSV</button><span class="small muted">${fmtN(rows.length)} hosts</span></div>
+    <div class="tw"><table><thead><tr>${th('host', 'Host')}${th('events', 'Events', 1)}${th('raised', 'Raised', 1)}${th('donors', 'Donors', 1)}${th('firstTime', 'First-time', 1)}${th('gave', 'Gave', 1)}${th('ratio', 'Raised per $ given', 1)}</tr></thead><tbody>
+    ${rows.map(h => `<tr><td><b>${esc(h.host)}</b><div class="small muted">${h.codes.map(esc).join(', ')}</div></td><td class="num">${h.events}</td><td class="num"><b>${fmt$(h.raised)}</b></td><td class="num">${fmtN(h.donors)}</td><td class="num">${fmtN(h.firstTime)}</td><td class="num">${h.gave != null ? `${fmt$(h.gave)}<div class="small muted">${esc(h.gaveName)}</div>` : '<span class="muted">no match</span>'}</td><td class="num">${h.ratio ? h.ratio.toFixed(1) + '×' : '<span class="muted">—</span>'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  if (view === 'channels') {
+    let rows = filt(D.codes, ['code', 'channel']); rows = sortRows(rows, sortK, sortDir);
+    CSV = { head: ['Source code', 'Channel', 'Gifts', 'Raised', 'Donors', 'First gift', 'Last gift'], rows: rows.map(c => [c.code, c.channel, c.n, c.amt.toFixed(2), c.donors, dayStr(c.first), dayStr(c.last)]) };
+    const mx = Math.max(...D.channels.map(c => c.amt));
+    return `<div class="bars" style="margin-bottom:14px">${D.channels.map(c => `<div>${esc(c.channel)}</div><div class="b ${c.channel === 'Events' ? 'gold' : ''}" style="width:${(c.amt / mx * 100).toFixed(1)}%"></div><div class="num small">${fmtK(c.amt)} · ${fmtN(c.donors)} donors</div>`).join('')}</div>
+    <div class="bar"><input type="search" id="q" placeholder="Search source code or channel" value="${esc(q)}"><button class="btn" id="csv">Copy as CSV</button><span class="small muted">${fmtN(rows.length)} codes</span></div>
+    <div class="tw"><table><thead><tr>${th('code', 'Source code')}${th('channel', 'Channel')}${th('n', 'Gifts', 1)}${th('amt', 'Raised', 1)}${th('donors', 'Donors', 1)}${th('first', 'First', 1)}${th('last', 'Last', 1)}</tr></thead><tbody>
+    ${rows.map(c => `<tr><td><code>${esc(c.code)}</code></td><td>${esc(c.channel)}</td><td class="num">${fmtN(c.n)}</td><td class="num"><b>${fmt$(c.amt)}</b></td><td class="num">${fmtN(c.donors)}</td><td class="num">${dayStr(c.first)}</td><td class="num">${dayStr(c.last)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  if (view === 'donors') {
+    let rows = filt(D.list, ['name', 'city', 'emp', 'occ', 'zip']); rows = sortRows(rows, sortK === 'amt' ? 'total' : sortK, sortDir);
+    const pages = Math.max(1, Math.ceil(rows.length / PS)); page = Math.min(page, pages - 1); const pg = rows.slice(page * PS, (page + 1) * PS);
+    CSV = { head: ['Donor', 'City', 'State', 'ZIP', 'Employer', 'Occupation', 'Gave', 'Gifts', 'Largest', 'Primary', 'General', 'Maxed', 'First gift', 'Last gift', 'Recurring', 'Top channel', 'Events', 'Raised as host'], rows: rows.map(r => [r.name, r.city, r.state, r.zip, r.emp, r.occ, r.total.toFixed(2), r.n, r.max.toFixed(2), r.pri.toFixed(2), r.gen.toFixed(2), r.maxed ? 'yes' : '', dayStr(r.first), dayStr(r.last), r.rec ? 'yes' : '', r.ch, r.events.join(' '), r.raised ? r.raised.toFixed(2) : '']) };
+    return `<div class="bar"><input type="search" id="q" placeholder="Search name, employer, occupation, city or ZIP" value="${esc(q)}"><button class="btn" id="csv">Copy as CSV</button><span class="small muted">${fmtN(rows.length)} donors, ${fmt$(rows.reduce((s, r) => s + r.total, 0))}</span></div>
+    <div class="tw"><table><thead><tr>${th('name', 'Donor')}<th>Location</th><th>Employer / occupation</th>${th('total', 'Gave', 1)}${th('raised', 'Raised', 1)}${th('n', 'Gifts', 1)}${th('max', 'Largest', 1)}${th('last', 'Last gift', 1)}${th('evn', 'Events', 1)}${th('ch', 'Top channel')}</tr></thead><tbody>
+    ${pg.map(r => `<tr><td><b>${esc(r.name)}</b>${r.maxed ? '<span class="pill ok">maxed</span>' : ''}${r.rec ? '<span class="pill">recurring</span>' : ''}${r.raised ? '<span class="pill ok">host</span>' : ''}</td><td>${esc(r.city)}${r.state ? ', ' + r.state : ''}</td><td class="small">${esc(r.emp)}${r.occ ? `<div class="muted">${esc(r.occ)}</div>` : ''}</td><td class="num"><b>${fmt$(r.total)}</b></td><td class="num">${r.raised ? fmt$(r.raised) : '<span class="muted">—</span>'}</td><td class="num">${fmtN(r.n)}</td><td class="num">${fmt$(r.max)}</td><td class="num">${dayStr(r.last)}<div class="small muted">${r.recency} days ago</div></td><td class="num">${r.evn || '<span class="muted">—</span>'}</td><td class="small">${esc(r.ch)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="pager"><button class="btn" id="prev" ${page === 0 ? 'disabled' : ''}>Previous</button><span>Page ${page + 1} of ${pages}</span><button class="btn" id="next" ${page >= pages - 1 ? 'disabled' : ''}>Next</button></div>`;
+  }
+  if (view === 'recon') {
+    const R = D.recon; if (!R) return '<div class="note">No Commission file was supplied to the build.</div>';
+    const rows = R.months.filter(m => m.ngpAll || m.commission);
+    CSV = { head: ['Month', 'NGP monetary', 'NGP all types', 'Commission filed', 'Difference'], rows: rows.map(m => [m.month, m.ngp.toFixed(2), m.ngpAll.toFixed(2), m.commission.toFixed(2), (m.ngpAll - m.commission).toFixed(2)]) };
+    return `<div class="two"><div class="card" style="margin-top:0"><h3>Campaign books (NGP)</h3><div class="bars">
+      <div>Gross monetary</div><div></div><div class="num">${fmt$(R.ngp.gross)}</div><div>Refunds</div><div></div><div class="num">−${fmt$(R.ngp.refunds)}</div><div>Net monetary</div><div></div><div class="num"><b>${fmt$(R.ngp.net)}</b></div><div>In-kind</div><div></div><div class="num">${fmt$(R.ngp.inkind)}</div><div>Donors</div><div></div><div class="num">${fmtN(R.ngp.donors)}</div><div>Aggregate ≤ $100</div><div></div><div class="num">${fmt$(R.ngp.under100)}</div><div>Through</div><div></div><div class="num">${dayStr(R.ngp.lastDay)}</div></div></div>
+      <div class="card" style="margin-top:0"><h3>Commission filings</h3><div class="bars">
+      <div>Gross receipts</div><div></div><div class="num">${fmt$(R.commission.gross)}</div><div>Refunds</div><div></div><div class="num">−${fmt$(R.commission.gross - R.commission.net)}</div><div>Net</div><div></div><div class="num"><b>${fmt$(R.commission.net)}</b></div><div>In-kind</div><div></div><div class="num">${fmt$(R.commission.inkind)}</div><div>Itemized donors</div><div></div><div class="num">${fmtN(R.commission.donors)}</div><div>Unitemized</div><div></div><div class="num">${fmt$(R.commission.unitemized)}</div><div>Through</div><div></div><div class="num">${dayStr(R.commission.lastDay)}</div></div></div></div>
+    <div class="bar" style="margin-top:14px"><button class="btn" id="csv">Copy as CSV</button><span class="small muted">Monthly, all contribution types</span></div>
+    <div class="tw"><table><thead><tr><th>Month</th><th class="num">NGP monetary</th><th class="num">NGP all types</th><th class="num">Commission filed</th><th class="num">Difference</th></tr></thead><tbody>
+    ${rows.map(m => { const diff = m.ngpAll - m.commission; const big = Math.abs(diff) > Math.max(25000, 0.05 * m.ngpAll); return `<tr><td>${monLabel(m.month)}</td><td class="num">${fmt$(m.ngp)}</td><td class="num">${fmt$(m.ngpAll)}</td><td class="num">${fmt$(m.commission)}</td><td class="num ${big ? '' : 'muted'}">${big ? `<span class="pill hot">${(diff > 0 ? '+' : '') + fmt$(diff)}</span>` : (diff > 0 ? '+' : '') + fmt$(diff)}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <div class="note" style="margin-top:10px">Large October and November differences are timing: the books run through ${dayStr(R.ngp.lastDay)}, the filings through ${dayStr(R.commission.lastDay)}, and the final pre-election and year-end reports have not posted. A month that stays apart after the next filing is the one to reconcile line by line.</div>`;
+  }
+}
+
+function render() {
+  const main = $('#main'); const V = VIEWS[view];
+  const months = Object.entries(D.months).sort(); const mx = Math.max(...months.map(([, m]) => m.amt));
+  const ev = D.channels.find(c => c.channel === 'Events') || { amt: 0, donors: 0 };
+  const unc = D.channels.find(c => c.channel === 'Uncoded online') || { amt: 0 };
+  main.innerHTML = `
+  <h1>Who raised what</h1><p class="sub">Keisha for Governor, from the NGP VAN export through ${dayStr(D.asof)} (${fmtN(D.rows)} gifts). The campaign’s own books, not the public filing: every donor including those under $100.</p>
+  <div class="kpis">${tile('Raised, net of refunds', fmt$(D.total), `${fmtN(D.donors)} donors`)}${tile('Through events', fmt$(ev.amt), `${fmtN(D.events.length)} events, ${fmtN(ev.donors)} donors`)}${tile('Under $100 donors', fmtN(D.tiers[0].donors), fmt$(D.tiers[0].amt) + ', not in the public filing by name')}${tile('Recurring donors', fmtN(D.recurring), fmt$(D.recurringAmt) + ' so far')}${tile('Maxed ($8,400+)', fmtN(D.tiers[3].donors), fmt$(D.tiers[3].amt))}${tile('Uncoded online', fmt$(unc.amt), 'ActBlue gifts with no source code')}</div>
+  <div class="card"><h3>Raised by month</h3><div class="months">${months.map(([m, o]) => { const u = o.byChannel['Uncoded online'] || 0; return `<div class="m" title="${monLabel(m)}: ${fmt$(o.amt)}, ${fmtN(o.newDonors)} new donors"><div class="small" style="font-size:10px">${fmtK(o.amt)}</div><div class="c" style="height:${(o.amt - u) / mx * 100}%"></div><div class="c u" style="height:${u / mx * 100}%"></div><div>${monLabel(m)}</div></div>`; }).join('')}</div><div class="note">Lighter segment: gifts that arrived without a source code.</div></div>
+  <div class="segs">${Object.entries(VIEWS).map(([k, v]) => `<button class="seg ${view === k ? 'on' : ''}" data-v="${k}">${v.label}</button>`).join('')}</div>
+  <div class="card"><h3>${V.label}</h3><div class="note">${V.note}</div>${body()}</div>`;
+  main.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; q = ''; page = 0; sortK = view === 'hosts' ? 'raised' : view === 'donors' ? 'total' : view === 'events' ? 'amt' : 'amt'; sortDir = -1; render(); }));
+  main.querySelectorAll('th[data-k]').forEach(h => h.addEventListener('click', () => { const k = h.dataset.k; if (sortK === k) sortDir *= -1; else { sortK = k; sortDir = ['name', 'host', 'code', 'channel', 'ch'].includes(k) ? 1 : -1; } page = 0; render(); }));
+  const qi = $('#q'); if (qi) { let t; qi.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = qi.value.trim(); page = 0; const pos = qi.selectionStart; render(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); }, 250); }); }
+  const pv = $('#prev'), nx = $('#next'); if (pv) { pv.addEventListener('click', () => { page--; render(); }); nx.addEventListener('click', () => { page++; render(); }); }
+  const cb = $('#csv'); if (cb) cb.addEventListener('click', async () => { const qv = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }; const out = [CSV.head.join(',')]; for (const r of CSV.rows) out.push(r.map(qv).join(',')); try { await navigator.clipboard.writeText(out.join('\n')); toast(`Copied ${fmtN(CSV.rows.length)} rows`); } catch (e) { toast('Clipboard blocked by the browser'); } });
+}
+
+(async () => { try { D = await load(); prep(); render(); } catch (e) { $('#main').innerHTML = `<div class="loading">Could not load: ${esc(e.message)}</div>`; } })();
