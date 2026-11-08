@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Governor Pulse — Finance sign in</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--rail:#1F2A3A;--field:#EEF0F3;--paper:#fff;--ink:#1A1F2B;--ink2:#5B6472;--rule:#D9DDE3;--gold:#B98A2F;--gold-2:#9A7224;--crit:#B8322E}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;grid-template-rows:auto 1fr;background:var(--field);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,sans-serif}
+header{background:var(--rail);color:#E6EAF0;padding:20px 24px}
+header b{font-size:20px;letter-spacing:-.02em}header small{display:block;color:#9AA5B5;font-size:13px}
+main{display:grid;place-items:center;padding:24px}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:3px;padding:26px 24px;width:min(420px,100%)}
+h1{font-size:20px;margin:0 0 6px}p{margin:0 0 16px;color:var(--ink2);font-size:14px}
+label{display:block;font-size:13px;color:var(--ink2);margin-bottom:6px}
+input{width:100%;height:42px;border:1px solid var(--rule);border-radius:3px;padding:0 12px;font:inherit;font-size:16px}
+button{margin-top:12px;width:100%;height:42px;border:0;border-radius:3px;background:var(--gold-2);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6}
+.err{color:var(--crit);font-size:13px;margin-top:10px;min-height:18px}
+.foot{margin-top:16px;font-size:12px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<header><b>Governor Pulse</b><small>Finance area, restricted to the campaign's finance team</small></header>
+<main>
+  <form class="card" id="f">
+    <h1>Sign in</h1>
+    <p>This area holds donor-level analysis that is not public record. Enter the finance passcode to continue.</p>
+    <label for="p">Passcode</label>
+    <input id="p" type="password" autocomplete="current-password" required autofocus>
+    <button id="b" type="submit">Continue</button>
+    <div class="err" id="e"></div>
+    <div class="foot">Sessions last 30 days on this device. Public campaign-finance views remain at <a href="/">governor-pulse.vercel.app</a>.</div>
+  </form>
+</main>
+<script>
+const f=document.getElementById('f'),e=document.getElementById('e'),b=document.getElementById('b');
+f.addEventListener('submit',async ev=>{ev.preventDefault();e.textContent='';b.disabled=true;
+  try{const r=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({passcode:document.getElementById('p').value})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok){const next=new URLSearchParams(location.search).get('next')||'/finance';location.href=next.startsWith('/')?next:'/finance';}
+    else e.textContent=j.error||'Sign-in failed.';}
+  catch(x){e.textContent='Could not reach the sign-in service.';}
+  b.disabled=false;});
+</script>
+</body>
+</html>

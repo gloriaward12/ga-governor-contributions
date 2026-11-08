@@ -28,6 +28,19 @@
           "value": "public, max-age=86400"
         }
       ]
+    },
+    {
+      "source": "/finance(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ]
     }
   ]
 }
