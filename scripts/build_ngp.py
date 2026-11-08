@@ -9,25 +9,34 @@ occupation and giving history, and only donors at $250+ lifetime, event attendee
 import sys, re, json, datetime as dt
 import pandas as pd, numpy as np
 
-SRC, EVF = sys.argv[1], sys.argv[2]
-COMM = sys.argv[3] if len(sys.argv) > 3 else None
+args = [a for a in sys.argv[1:]]
+PBG = None
+if '--pbg' in args: i = args.index('--pbg'); PBG = args[i + 1]; del args[i:i + 2]
+SRC, EVF = args[0], args[1]
+COMM = args[2] if len(args) > 2 else None
 OUT = 'public/finance/ngp.json'
 EPOCH = dt.date(2025, 1, 1)
 day = lambda d: (d.date() - EPOCH).days if pd.notna(d) else None
 LIMIT = 8400
 
-d = pd.read_pickle(SRC) if SRC.endswith(".pkl") else pd.read_excel(SRC)
-d = d[pd.to_numeric(d['Contribution ID'], errors='coerce').notna()].copy()
-for c in ['Source Code', 'Designation', 'Contribution Type', 'Payment Method', 'Period', 'Home State/Province', 'Home City', 'Employer', 'Occupation', 'Contact Name']:
-    d[c] = d[c].fillna('').astype(str).str.strip().replace({'nan': ''})
-d['Amount'] = pd.to_numeric(d['Amount'], errors='coerce').fillna(0)
-d['adj'] = pd.to_numeric(d['Total Adjusted Amount'], errors='coerce').fillna(0)
-d['net'] = d['Amount'] - d['adj']
-d['Date Received'] = pd.to_datetime(d['Date Received'], errors='coerce')
-d = d[d['Date Received'] >= '2025-01-01']
-d['day'] = d['Date Received'].map(day)
-d['month'] = d['Date Received'].dt.strftime('%Y-%m')
+def load_export(path):
+    d = pd.read_pickle(path) if path.endswith('.pkl') else pd.read_excel(path)
+    d = d[pd.to_numeric(d['Contribution ID'], errors='coerce').notna()].copy()
+    for c in ['Source Code', 'Designation', 'Contribution Type', 'Payment Method', 'Period', 'Home State/Province', 'Home City', 'Employer', 'Occupation', 'Contact Name']:
+        if c not in d: d[c] = ''
+        d[c] = d[c].fillna('').astype(str).str.strip().replace({'nan': ''})
+    d['Amount'] = pd.to_numeric(d['Amount'], errors='coerce').fillna(0)
+    d['adj'] = pd.to_numeric(d.get('Total Adjusted Amount', 0), errors='coerce').fillna(0)
+    d['net'] = d['Amount'] - d['adj']
+    d['Date Received'] = pd.to_datetime(d['Date Received'], errors='coerce')
+    d = d[d['Date Received'] >= '2025-01-01'].copy()
+    d['day'] = d['Date Received'].map(day)
+    d['month'] = d['Date Received'].dt.strftime('%Y-%m')
+    return d
+d = load_export(SRC)
+pb = load_export(PBG) if PBG else None
 mon = d[d['Contribution Type'] == 'Monetary Contribution'].copy()
+pbmon = pb[pb['Contribution Type'] == 'Monetary Contribution'].copy() if pb is not None else None
 
 # ---- channel classification -------------------------------------------------------------------
 ev = pd.read_csv(EVF)
@@ -178,18 +187,40 @@ if COMM:
                           under100=round(float(tot[tot <= 100].sum()), 2), over100=round(float(tot[tot > 100].sum()), 2), lastDay=int(mon['day'].max())),
                  months=[dict(month=m, ngp=months.get(m, {}).get('amt', 0), ngpAll=round(float(allm.get(m, 0)), 2), commission=round(float(cm.get(m, 0)), 2)) for m in sorted(set(months) | set(cm))])
 
+# ---- Battleground (leadership committee) --------------------------------------------------------
+pbg = None; pb_by_vid = {}; pb_by_name = {}
+if pbmon is not None and len(pbmon):
+    pbmon['channel'] = pbmon['Source Code'].map(channel)
+    pg = pbmon.groupby('VANID').agg(name=('Contact Name', 'first'), state=('Home State/Province', 'first'), total=('net', 'sum'), n=('net', 'size'), first=('day', 'min'), last=('day', 'max'), mx=('net', 'max'))
+    for vid, r in pg.iterrows():
+        pb_by_vid[int(vid)] = r; pb_by_name[(str(r['name']).lower(), str(r['state']))] = r
+    pcodes = pbmon.groupby(['Source Code', 'channel']).agg(n=('net', 'size'), amt=('net', 'sum'), donors=('VANID', 'nunique')).reset_index().sort_values('amt', ascending=False)
+    pmonths = {m: dict(n=int(len(g)), amt=round(float(g['net'].sum()), 2), donors=int(g['VANID'].nunique())) for m, g in pbmon.groupby('month')}
+    ptot = pg['total']
+    pbg = dict(asof=int(pbmon['day'].max()), rows=int(len(pbmon)), total=round(float(pbmon['net'].sum()), 2), donors=int(pbmon['VANID'].nunique()),
+               inkind=round(float(pb.loc[pb['Contribution Type'] == 'In-kind Contribution', 'Amount'].sum()), 2),
+               codes=[dict(code=r['Source Code'] or '(blank)', channel=r['channel'], n=int(r['n']), amt=round(float(r['amt']), 2), donors=int(r['donors'])) for _, r in pcodes.iterrows()],
+               months=pmonths,
+               tiers=[dict(label=l, donors=int(m.sum()), amt=round(float(ptot[m].sum()), 2)) for l, m in [('Under $1,000', ptot < 1000), ('$1,000 to $9,999', (ptot >= 1000) & (ptot < 10000)), ('$10,000 to $49,999', (ptot >= 10000) & (ptot < 50000)), ('$50,000 and up', ptot >= 50000)]],
+               top=[dict(name=r['name'], state=r['state'], total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).head(300).iterrows()])
+    # Battleground donors not in the campaign list at all
+    camp_names = {(str(n).lower(), str(st)) for n, st in zip(agg['name'], agg['state'])}
+    pbg['onlyThere'] = [dict(name=r['name'], state=r['state'], total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).iterrows() if int(_) not in agg.index and (str(r['name']).lower(), str(r['state'])) not in camp_names][:500]
+
 # ---- donors list ----------------------------------------------------------------------------------
 host_vids = {c['vanid'] for e in events for c in e['hostCandidates']}
-keep = agg[(agg['total'] >= 250) | agg['events'].notna() | agg.index.isin(host_vids)]
+lead_vids = set(pb_by_vid)
+keep = agg[(agg['total'] >= 250) | agg['events'].notna() | agg.index.isin(host_vids) | agg.index.isin(lead_vids)]
 donors = []
 for vid, r in keep.iterrows():
     donors.append(dict(v=int(vid), name=r['name'], city=r['city'], state=r['state'], zip=str(r['zip']) if pd.notna(r['zip']) else '', emp=r['emp'], occ=r['occ'],
                        total=round(float(r['total']), 2), n=int(r['n']), first=int(r['first']), last=int(r['last']), max=round(float(r['mx']), 2),
                        pri=round(float(r['pri']), 2), gen=round(float(r['gen']), 2), events=r['events'] if isinstance(r['events'], list) else [],
-                       ch=r['topChannel'], rec=bool(r['recurring'])))
+                       ch=r['topChannel'], rec=bool(r['recurring']),
+                       lead=round(float((pb_by_vid.get(int(vid)) if int(vid) in pb_by_vid else pb_by_name.get((str(r['name']).lower(), str(r['state'])), {'total': 0}))['total']), 2)))
 
 out = dict(generated=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC'), asof=int(mon['day'].max()), rows=int(len(mon)), total=round(float(mon['net'].sum()), 2),
            donors=int(mon['VANID'].nunique()), recurring=int(len(rec)), recurringAmt=round(float(mon[mon['VANID'].isin(rec)]['net'].sum()), 2),
-           tiers=tiers, channels=channels, codes=codes, months=months, events=events, hosts=hosts, recon=recon, list=donors)
+           tiers=tiers, channels=channels, codes=codes, months=months, events=events, hosts=hosts, recon=recon, pbg=pbg, list=donors)
 json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
 print('events', len(events), 'hosts', len(hosts), 'donors listed', len(donors), 'bytes', len(open(OUT).read()))
