@@ -41,7 +41,7 @@ function build(camp, lead) {
   ASOF = Math.max(...rows.map(r => r.last));
   for (const r of rows) {
     r.recency = ASOF - r.last; r.tenure = ASOF - r.first; r.avg = r.total / r.n; r.gifts = r.n; r.touches = r.distinct.size; delete r.distinct;
-    r.maxed = r.pri >= LIMIT || r.gen >= LIMIT;
+    r.maxed = r.individual && (r.pri >= LIMIT || r.gen >= LIMIT);   // limits apply per person; organizations are listed separately
     r.public = PUBLIC_RX.test(r.emp || '') || PUBLIC_RX.test(r.occ || '');
     // suggested next ask: a step above what they have shown they will give, rounded to a band; maxed donors are a leadership-committee or next-cycle ask
     const base = Math.max(r.max * 1.5, r.avg * 2, 100);
@@ -81,7 +81,7 @@ function render() {
   const tile = (l, v, d) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
   main.innerHTML = `
   <h1>Ask lists</h1><p class="sub">Itemized donors to Keisha for Governor and Project Battleground Georgia, combined, as filed through ${dayStr(ASOF)}. Not public: built from public filings but organized for fundraising.</p>
-  <div class="notice">Waiting on two inputs that complete this view: the <b>ActBlue export</b> (adds every small-dollar donor, fundraising pages and reference codes for who raised what) and the <b>public-salary match</b> for capacity. The lists below work today from the Commission’s itemized record.</div>
+  <div class="notice">Built from the Commission\u2019s itemized record. The <b>ActBlue export</b> will add every small-dollar donor plus fundraising pages and reference codes for who raised what. The <b>Salary known</b> list carries the Open Georgia salary match (state agencies, universities and school boards only).</div>
   <div class="kpis">${tile('Donors scored', fmtN(rows.length), `${fmt$(sum(rows))} itemized, both committees`)}${tile('Maxed this cycle', fmtN(counts.maxed.length), fmt$(sum(counts.maxed)))}${tile('Lapsed $1,000+', fmtN(counts.lapsed.length), fmt$(sum(counts.lapsed)) + ' lifetime')}${tile('Upgrade candidates', fmtN(counts.upgrade.length), 'frequent, small')}${tile('Battleground only', fmtN(counts.leadonly.length), fmt$(sum(counts.leadonly)))}${tile('Salary known', fmtN(counts.capacity.length), 'matched to Open Georgia (state, universities, school boards)')}</div>
   <div class="segs">${Object.entries(SEGS).map(([k, s]) => `<button class="seg ${seg === k ? 'on' : ''}" data-seg="${k}">${s.label} <b>${fmtN(counts[k].length)}</b></button>`).join('')}</div>
   <div class="card"><h3>${S.label}</h3><div class="note">${S.note} <b>Suggested ask</b> is a step above the donor’s demonstrated giving, rounded to a standard band, capped at the $8,400 limit; <b>score</b> weighs amount (double), recency and frequency on a 1 to 20 scale.</div>
