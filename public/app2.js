@@ -616,6 +616,7 @@ function render() {
 }
 // extend the search blob with county, metro and sector once a candidate loads
 function extendSearch() {
+  if (D._ext) return; D._ext = true;
   if (!D || D._searchExtended || !D.det.county) return; D._searchExtended = true;
   const det = D.det; const co = DICT.county, me = DICT.metro, se = DICT.sector;
   for (let i = 0; i < N; i++) D.search[i] += '|' + (co[det.county[i]] + '|' + me[det.metro[i]] + '|' + se[det.sector[i]]).toLowerCase();
@@ -631,4 +632,6 @@ async function load(id) {
 (function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending|pbg|donors)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); }
   })();
 // if the base page already finished loading before this script arrived (cached data), re-render with the extended views
-if (typeof D !== 'undefined' && D && D.det) { extendSearch(); if (!applyPendingQ()) render(); }
+if (typeof D !== 'undefined' && D && D.det && !document.querySelector('#main .loading')) { extendSearch(); if (!applyPendingQ()) render(); }
+// the base page usually starts its first load before this script runs, so the handed-in search is applied once that load has finished and reset the filters
+if (PENDING_Q) { const t = setInterval(() => { if (typeof D !== 'undefined' && D && D.det && !document.querySelector('#main .loading')) { clearInterval(t); if (!D._ext) extendSearch(); applyPendingQ(); } }, 150); setTimeout(() => clearInterval(t), 120000); }
