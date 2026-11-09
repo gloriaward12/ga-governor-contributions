@@ -19,10 +19,11 @@ const VIEWS = {
   channels: { label: 'Channels and codes', note: 'Every source code in the export, grouped into channels. "Uncoded online" is ActBlue money that arrived with a Placeholder or blank code, most of it in October; those gifts are real but cannot be credited to a page or a person.' },
   donors: { label: 'Donors', note: 'Donors at $250 and up lifetime, plus everyone who gave through an event. <b>Raised</b> appears for donors matched as event hosts. Recurring means three or more gifts of the same amount about a month apart.' },
   pbg: { label: 'Battleground', note: 'Project Battleground Georgia, the leadership committee, from its own NGP export: unlimited gifts, so the tiers run higher. <b>Only there</b> lists Battleground donors who never gave to the campaign; they belong in the combined ranking for recognition.' },
+  compliance: { label: 'Compliance', note: 'What the Commission would find first, from the books: individuals over the per-election limit, donors over $100 aggregate with no employer or occupation, households where every member is at the limit, records that look like the same person twice, and refunds on file. Each list opens in Reports for export.' },
   recon: { label: 'Books vs filings', note: 'NGP (the campaign’s books, through the export date) against the Commission filings (what the public sees, through the last filed day). Months should agree once the next filing lands; the Commission line includes in-kind, so the comparison uses NGP’s all-types total.' }
 };
 
-async function load() { const r = await fetch('/finance/ngp.json', { cache: 'no-cache' }); if (!r.ok) throw new Error(`ngp.json: ${r.status}`); return r.json(); }
+async function load() { const [r, c] = await Promise.all([fetch('/finance/ngp.json', { cache: 'no-cache' }), fetch('/finance/compliance.json', { cache: 'no-cache' })]); if (!r.ok) throw new Error(`ngp.json: ${r.status}`); const d = await r.json(); d.compliance = c.ok ? await c.json() : null; return d; }
 
 function prep() {
   const hostOf = new Map();
@@ -95,6 +96,22 @@ function body() {
     <div class="bar" style="margin-top:14px"><input type="search" id="q" placeholder="Search Battleground donors" value="${esc(q)}"><button class="btn" id="csv">Copy as CSV</button><span class="small muted">top ${fmtN(rows.length)}</span></div>
     <div class="tw"><table><thead><tr>${th('name', 'Donor')}<th>State</th>${th('total', 'Battleground', 1)}${th('n', 'Gifts', 1)}${th('last', 'Last gift', 1)}</tr></thead><tbody>${rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.state)}</td><td class="num"><b>${fmt$(r.total)}</b></td><td class="num">${r.n}</td><td class="num">${dayStr(r.last)}</td></tr>`).join('')}</tbody></table></div>`;
   }
+  if (view === 'compliance') {
+    const K = D.compliance; if (!K) return '<div class="note">compliance.json has not been built yet.</div>';
+    const c = K.counts; const lim = K.limits;
+    const tbl = (rows, head, cells) => `<div class="tw" style="max-height:300px"><table><thead><tr>${head.map(h => `<th class="${h.endsWith('$') ? 'num' : ''}">${esc(h.replace(/\$$/, ''))}</th>`).join('')}</tr></thead><tbody>${rows.map(cells).join('')}</tbody></table></div>`;
+    return `<div class="kpis" style="margin-bottom:14px">${tile('Over the limit', fmtN(c.overLimit), 'individuals, by election')}${tile('Missing employer or occupation', fmtN(c.missingInfo), fmt$(c.missingAmt) + ' from these donors')}${tile('Households at the limit', fmtN(c.household), 'every member maxed')}${tile('Possible duplicates', fmtN(c.duplicates), 'same name and ZIP, two records')}${tile('Refunds on file', fmtN(c.refunds), fmt$(c.refundAmt))}${tile('Uncoded online gifts', fmtN(c.uncodedN), fmt$(c.uncoded))}</div>
+    <div class="two">
+      <div class="card" style="margin-top:0"><h3>Over the limit <a class="small" href="/finance/reports#overLimit">export</a></h3><div class="note">Limit $${lim.Primary.toLocaleString()} per election for the primary and general, $${lim['Run-off Primary'].toLocaleString()} for a runoff. Refund the excess or redesignate it with the donor's written consent before the next filing.</div>
+      ${K.overLimit.length ? tbl(K.overLimit, ['Donor', 'Election', 'Gave$', 'Over by$', 'Last gift$'], r => `<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.city)}, ${esc(r.state)}</div></td><td>${esc(r.period)}</td><td class="num">${fmt$(r.gave)}</td><td class="num"><b>${fmt$(r.excess)}</b></td><td class="num">${dayStr(r.last)}</td></tr>`) : '<div class="small muted">None.</div>'}</div>
+      <div class="card" style="margin-top:0"><h3>Missing employer or occupation <a class="small" href="/finance/reports#missingInfo">export</a></h3><div class="note">Georgia requires both for anyone over $100 aggregate. Donors whose occupation is retired, not employed, student or homemaker are not flagged for a blank employer.</div>
+      ${tbl(K.missingInfo.slice(0, 60), ['Donor', 'Gave$', 'Missing', 'Last gift$'], r => `<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.city)}, ${esc(r.state)}</div></td><td class="num">${fmt$(r.total)}</td><td>${esc(r.missing)}</td><td class="num">${dayStr(r.last)}</td></tr>`)}</div>
+      <div class="card"><h3>Households at the limit <a class="small" href="/finance/reports#household">export</a></h3><div class="note">Not a violation. Every member has given the maximum in that election; the next ask is the leadership committee.</div>
+      ${tbl(K.household, ['Household', 'Election', 'Members', 'Gave$'], r => `<tr><td><b>${esc(r.household)}</b></td><td>${esc(r.period)}</td><td class="small">${r.members.map(m => esc(m.name)).join('<br>')}</td><td class="num">${fmt$(r.gave)}</td></tr>`)}</div>
+      <div class="card"><h3>Possible duplicate records <a class="small" href="/finance/reports#duplicates">export</a></h3><div class="note">Same name and ZIP under more than one NGP record. Merged records compute limits and recognition correctly; split ones do not. Showing the largest 40 of ${fmtN(c.duplicates)}.</div>
+      ${tbl(K.duplicates.slice(0, 40), ['Donor', 'ZIP', 'Records', 'Gave, all$'], r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.zip)}</td><td class="small">${r.records.map(x => `${x.v}: ${fmt$(x.gave)}`).join('<br>')}</td><td class="num">${fmt$(r.total)}</td></tr>`)}</div>
+    </div>`;
+  }
   if (view === 'recon') {
     const R = D.recon; if (!R) return '<div class="note">No Commission file was supplied to the build.</div>';
     const rows = R.months.filter(m => m.ngpAll || m.commission);
@@ -151,7 +168,7 @@ function render() {
   main.querySelectorAll('.evlink').forEach(a => a.addEventListener('click', ev => { ev.preventDefault(); openEv(a.dataset.code); }));
   const bk = $('#back'); if (bk) bk.addEventListener('click', () => { EV = null; history.replaceState(null, '', location.pathname); render(); });
   main.querySelectorAll('th[data-ek]').forEach(h => h.addEventListener('click', () => { const k = h.dataset.ek; if (evSort.k === k) evSort.dir *= -1; else evSort = { k, dir: k === 'name' ? 1 : -1 }; render(); }));
-  main.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; EV = null; history.replaceState(null, '', location.pathname); q = ''; page = 0; sortK = view === 'hosts' ? 'raised' : view === 'donors' ? 'both' : view === 'pbg' ? 'total' : view === 'committees' ? 'roomTotal' : 'amt'; sortDir = -1; render(); }));
+  main.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { view = b.dataset.v; EV = null; history.replaceState(null, '', location.pathname); q = ''; page = 0; sortK = view === 'hosts' ? 'raised' : view === 'donors' ? 'both' : view === 'pbg' ? 'total' : view === 'committees' ? 'roomTotal' : 'amt'; if (view === 'reports') { location.href = '/finance/reports'; return; } sortDir = -1; render(); }));
   main.querySelectorAll('th[data-k]').forEach(h => h.addEventListener('click', () => { const k = h.dataset.k; if (sortK === k) sortDir *= -1; else { sortK = k; sortDir = ['name', 'host', 'code', 'channel', 'ch'].includes(k) ? 1 : -1; } page = 0; render(); }));
   const qi = $('#q'); if (qi) { let t; qi.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = qi.value.trim(); page = 0; const pos = qi.selectionStart; render(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); }, 250); }); }
   const pv = $('#prev'), nx = $('#next'); if (pv) { pv.addEventListener('click', () => { page--; render(); }); nx.addEventListener('click', () => { page++; render(); }); }

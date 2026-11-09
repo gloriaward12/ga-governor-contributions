@@ -252,6 +252,65 @@ if pbmon is not None and len(pbmon):
     camp_names = {(str(n).lower(), str(st)) for n, st in zip(agg['name'], agg['state'])}
     pbg['onlyThere'] = [dict(name=r['name'], state=r['state'], total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).iterrows() if int(_) not in agg.index and (str(r['name']).lower(), str(r['state'])) not in camp_names][:500]
 
+# ---- compliance guard -----------------------------------------------------------------------------
+ORG_RX = re.compile(r'\b(LLC|L\.L\.C|Inc|Incorporated|PAC|Corp|Corporation|Company|Co\.|Associates|Group|Partners|Partnership|Committee|Fund|Trust|Foundation|Holdings|Enterprises|Services|Solutions|Church|Association|Union|Local \d+|LLP|PC|PLLC)\b', re.I)
+def is_org(name): return bool(ORG_RX.search(str(name))) or (',' not in str(name))
+agg['org'] = agg['name'].map(is_org)
+PERIODS = [c for c in per.columns]
+def plabel(p): return {'Primary': 'Primary', 'General': 'General', 'Run-off Primary': 'Primary runoff', 'Run-off General': 'General runoff'}.get(p, p)
+PLIMIT = {'Primary': 8400, 'General': 8400, 'Run-off Primary': 4800, 'Run-off General': 4800}
+over = []
+for vid, r in agg.iterrows():
+    if r['org']: continue
+    for p_ in PERIODS:
+        lim = PLIMIT.get(p_); amt = float(per.loc[vid, p_]) if vid in per.index else 0
+        if lim and amt > lim + 0.5:
+            over.append(dict(v=int(vid), name=r['name'], city=r['city'], state=r['state'], period=plabel(p_), gave=round(amt, 2), limit=lim, excess=round(amt - lim, 2), last=int(r['last'])))
+over.sort(key=lambda x: -x['excess'])
+# household: same surname + ZIP, individuals, combined over limit in a period (a warning, not a violation; spouses have separate limits unless funds are joint)
+hh = {}
+for vid, r in agg.iterrows():
+    if r['org']: continue
+    ln = str(r['name']).split(',')[0].strip().lower(); z = str(r['zip'])[:5]
+    if not ln or not z or z == 'nan': continue
+    hh.setdefault((ln, z), []).append(vid)
+household = []
+for (ln, z), vids in hh.items():
+    if len(vids) < 2: continue
+    for p_ in PERIODS:
+        lim = PLIMIT.get(p_)
+        if not lim: continue
+        tot = float(sum(per.loc[v, p_] for v in vids if v in per.index))
+        if tot >= lim * len(vids) - 0.5:   # every member at the limit: the household has nowhere left to give the campaign
+            household.append(dict(household=f"{agg.loc[vids[0], 'name'].split(',')[0]} ({z})", members=[dict(v=int(v), name=agg.loc[v, 'name'], gave=round(float(per.loc[v, p_]) if v in per.index else 0, 2)) for v in vids], period=plabel(p_), gave=round(tot, 2), limit=lim, n=len(vids)))
+household.sort(key=lambda x: -x['gave'])
+missing = []
+for vid, r in agg.iterrows():
+    if r['org'] or r['total'] <= 100: continue
+    emp, occ = str(r['emp'] or '').strip(), str(r['occ'] or '').strip()
+    no_emp_ok = occ.lower() in ('not employed', 'retired', 'homemaker', 'student', 'unemployed', 'self-employed', 'self employed', 'none')
+    bad_e = (emp == '' or emp.lower() in ('nan', 'none', 'n/a', 'na', 'unknown', 'information requested')) and not no_emp_ok
+    bad_o = occ == '' or occ.lower() in ('nan', 'n/a', 'na', 'unknown', 'information requested')
+    if bad_e or bad_o:
+        missing.append(dict(v=int(vid), name=r['name'], city=r['city'], state=r['state'], total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last']), missing=('employer and occupation' if bad_e and bad_o else 'employer' if bad_e else 'occupation'), emp=emp if not bad_e else '', occ=occ if not bad_o else ''))
+missing.sort(key=lambda x: -x['total'])
+# possible duplicate records: same normalized name + ZIP under different VANIDs
+dups = []
+seen_nk = {}
+for vid, r in agg.iterrows():
+    k = (nk(r['name']), str(r['zip'])[:5])
+    seen_nk.setdefault(k, []).append(vid)
+for k, vids in seen_nk.items():
+    if len(vids) > 1 and k[1] not in ('', 'nan'):
+        dups.append(dict(name=agg.loc[vids[0], 'name'], zip=k[1], records=[dict(v=int(v), gave=round(float(agg.loc[v, 'total']), 2), n=int(agg.loc[v, 'n'])) for v in vids], total=round(float(sum(agg.loc[v, 'total'] for v in vids)), 2)))
+dups.sort(key=lambda x: -x['total'])
+refunded = mon[mon['adj'] > 0].groupby('VANID').agg(name=('Contact Name', 'first'), amt=('adj', 'sum'), n=('adj', 'size'), last=('day', 'max')).sort_values('amt', ascending=False)
+compliance = dict(limits=PLIMIT, overLimit=over, household=household[:300], missingInfo=missing, duplicates=dups[:500],
+                  refunds=[dict(v=int(v), name=r['name'], amt=round(float(r['amt']), 2), n=int(r['n']), last=int(r['last'])) for v, r in refunded.head(500).iterrows()],
+                  counts=dict(overLimit=len(over), household=len(household), missingInfo=len(missing), missingAmt=round(float(sum(m['total'] for m in missing)), 2), duplicates=len(dups), refunds=int(len(refunded)), refundAmt=round(float(refunded['amt'].sum()), 2), uncoded=round(float(mon.loc[mon['channel'] == 'Uncoded online', 'net'].sum()), 2), uncodedN=int((mon['channel'] == 'Uncoded online').sum())))
+json.dump(compliance, open('public/finance/compliance.json', 'w'), separators=(',', ':'), default=str)
+print('compliance', compliance['counts'])
+
 # ---- donors list ----------------------------------------------------------------------------------
 host_vids = {c['vanid'] for e in events for c in e['hostCandidates']}
 lead_vids = set(pb_by_vid)
