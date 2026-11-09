@@ -138,6 +138,7 @@ if BOARDS:
         pk = personkey(parts[-1].rstrip(',').replace('Jr.', '').replace('Sr.', '').strip() or parts[-2], parts[0])
         if len(parts) >= 3 and parts[-1] in ('Jr.', 'Sr.', 'II', 'III', 'IV'): pk = personkey(parts[-2].rstrip(','), parts[0])
         if pk not in pkeys_don: continue
+        if pk_counts.get(pk, 0) > 1 or (len(pbg) and int(((pbg['pkey'] == pk) & pbg['person']).sum()) > 1): continue   # common name: not safe to assert
         c, p, nrec, dn = giving_for_person(pk)
         if c + p <= 0: continue
         board_hits.append(dict(name=nm, donorName=dn, board=a.get('board', ''), reappointed=bool(a.get('reappointed')), date=a.get('date', ''), bio=(a.get('bio') or '')[:160], url=a.get('url', ''), gaveCamp=round(c, 2), gavePbg=round(p, 2)))
