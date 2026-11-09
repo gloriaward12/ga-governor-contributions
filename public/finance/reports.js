@@ -101,8 +101,17 @@ function rows() {
   if (k) rs = [...rs].sort((a, b) => { const va = a[k], vb = b[k]; if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1; if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir; return (String(va).toLowerCase() < String(vb).toLowerCase() ? -1 : 1) * dir; });
   return rs;
 }
-function activeCols() { const all = COLS[cur.ds].map(c => c[0]); return (cur.cols || all).filter(k => all.includes(k)); }
+const DEFAULT_COLS = { donors: ['name', 'city', 'state', 'emp', 'total', 'lead', 'both', 'raised', 'n', 'last', 'ch'], gifts: ['event', 'edate', 'name', 'city', 'state', 'amt', 'day', 'ft', 'life', 'pbg'], events: ['date', 'name', 'host', 'code', 'confirmed', 'amt', 'donors', 'firstTime', 'max', 'roomTotal'], hosts: ['host', 'events', 'raised', 'donors', 'firstTime', 'gaveName', 'gave', 'ratio'] };
+function activeCols() { const all = COLS[cur.ds].map(c => c[0]); return (cur.cols || DEFAULT_COLS[cur.ds] || all).filter(k => all.includes(k)); }
 
+function filterChips() {
+  const f = cur.f; const out = [];
+  const add = (l, v) => { if (v !== undefined && v !== '' && v !== null) out.push(`<span class="chip">${esc(l)} <b>${esc(v)}</b></span>`); };
+  add('search', f.q); add('from', f.from); add('to', f.to); add('state', f.state); add('minimum', f.minAmt && fmt$(+f.minAmt)); add('combined at least', f.minBoth && fmt$(+f.minBoth)); add('campaign at least', f.minTotal && fmt$(+f.minTotal));
+  add('maxed', f.maxed); add('Battleground giving', f.leadZero === 'yes' ? 'none' : f.leadZero === 'no' ? 'some' : ''); add('no gift in', f.minDays && f.minDays + ' days'); add('first gift within', f.firstWithin && f.firstWithin + ' days');
+  add('only', f.eventOnly === 'yes' ? 'event donors' : f.hostOnly === 'yes' ? 'hosts' : f.rec === 'yes' ? 'recurring' : ''); add('event', f.event); add('listed events only', f.listedOnly);
+  return out.join('');
+}
 function render() {
   const main = $('#main'); const rs = rows(); const cols = activeCols(); const PREVIEW = 300;
   const states = [...new Set((DS[cur.ds] || []).map(r => r.state).filter(Boolean))].sort();
@@ -129,12 +138,14 @@ function render() {
       <label class="f">Columns</label><div class="cols">${COLS[cur.ds].map(c => `<label><input type="checkbox" data-col="${c[0]}" ${cols.includes(c[0]) ? 'checked' : ''}> ${esc(c[1])}</label>`).join('')}</div>
       <div class="bar" style="margin-top:10px"><button class="btn" id="reset">Clear filters</button></div>
     </div>
-    <div>
-      <div class="bar"><b>${esc(DSNAME[cur.ds])}</b><span class="small muted">${fmtN(rs.length)} rows${rs.length > PREVIEW ? `, showing ${PREVIEW}` : ''}</span><span style="flex:1"></span><button class="btn primary" id="xcsv">Download CSV</button><button class="btn" id="xxlsx">Download Excel</button><button class="btn" id="xprint">Print / PDF</button><button class="btn" id="xcopy">Copy</button></div>
+    <div class="results">
+      <div class="bar"><div><b>${esc(cur.preset ? PRESETS.find(p => p.id === cur.preset).label : DSNAME[cur.ds])}</b> <span class="count">${fmtN(rs.length)} rows${rs.length > PREVIEW ? `, first ${PREVIEW} shown; exports include all` : ''}</span></div><span style="flex:1"></span><button class="btn primary" id="xcsv">Download CSV</button><button class="btn" id="xxlsx">Download Excel</button><button class="btn" id="xprint">Print / PDF</button><button class="btn" id="xcopy">Copy</button></div>
       <div class="note">${DSNOTE[cur.ds] || ''}</div>
+      <div>${filterChips()}</div>
       <div class="printhead"><h2>${esc(cur.preset ? PRESETS.find(p => p.id === cur.preset).label : DSNAME[cur.ds])}</h2><div class="m">Keisha for Governor · Governor Pulse Finance · data through ${dayStr(D.asof)} · printed ${new Date().toLocaleDateString()} · ${fmtN(rs.length)} rows · prepared by Cura Consulting Group</div></div>
       <div class="tw"><table><thead><tr>${cols.map(k => { const c = COLS[cur.ds].find(x => x[0] === k); const num = ['money', 'int', 'num'].includes(c[2]); return `<th class="${num ? 'num' : ''} ${cur.sort === k ? 'on' : ''}" data-k="${k}">${esc(c[1])}${cur.sort === k ? (cur.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`; }).join('')}</tr></thead>
-      <tbody>${rs.slice(0, PREVIEW).map(r => `<tr>${cols.map(k => { const t = colType(cur.ds, k); const num = ['money', 'int', 'num'].includes(t); return `<td class="${num ? 'num' : ''}">${esc(cell(r[k], t))}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+      <tbody>${rs.slice(0, PREVIEW).map(r => `<tr>${cols.map(k => { const t = colType(cur.ds, k); const num = ['money', 'int', 'num'].includes(t); return `<td class="${num ? 'num' : t === 'day' ? 'd' : 't'}">${esc(cell(r[k], t))}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+      ${rs.length === 0 ? '<div class="note" style="padding:30px 0;text-align:center">No rows match these filters.</div>' : ''}
     </div>
   </div>`;
   main.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => { const p = PRESETS.find(x => x.id === b.dataset.p); cur = { ds: p.ds, cols: p.cols, sort: p.sort, dir: p.dir || -1, f: { ...p.f }, preset: p.id }; render(); }));
