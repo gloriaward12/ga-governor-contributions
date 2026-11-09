@@ -620,13 +620,15 @@ function extendSearch() {
   const det = D.det; const co = DICT.county, me = DICT.metro, se = DICT.sector;
   for (let i = 0; i < N; i++) D.search[i] += '|' + (co[det.county[i]] + '|' + me[det.metro[i]] + '|' + se[det.sector[i]]).toLowerCase();
 }
+let PENDING_Q = new URLSearchParams(location.search).get('q') || '';   // a search handed in by link (e.g. from the finance pages)
+function applyPendingQ() { if (!PENDING_Q) return false; const qi = $('#q'); if (qi) qi.value = PENDING_Q; state.q = PENDING_Q.toLowerCase(); PENDING_Q = ''; apply(); return true; }
 async function load(id) {
-  await BASE.load(id);
+  await BASE.load(id);          // note: the base loader clears the search box and filter state
   extendSearch();
-  if (state.q) apply();
+  if (!applyPendingQ() && state.q) apply();
 }
 // accept the new tab names in the hash
 (function () { const h = (location.hash || '').slice(1); const hm = h.match(/^(?:cand-\d+-)?(intel|spending|pbg|donors)$/); if (hm) { tab = hm[1]; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); }
-  const qp = new URLSearchParams(location.search).get('q'); if (qp) { const qi = $('#q'); if (qi) { qi.value = qp; state.q = qp.toLowerCase(); } } })();
+  })();
 // if the base page already finished loading before this script arrived (cached data), re-render with the extended views
-if (typeof D !== 'undefined' && D && D.det) { extendSearch(); if (state.q) apply(); else render(); }
+if (typeof D !== 'undefined' && D && D.det) { extendSearch(); if (!applyPendingQ()) render(); }
