@@ -284,13 +284,19 @@ for e in events:
         seen_v.add(g['v'])
         if g['pbg'] > 0: e['pbgAmt'] += g['pbg']; e['pbgDonors'] += 1
     e['pbgAmt'] = round(e['pbgAmt'], 2)
+    e['pbgGifts'] = []
+    if pbmon is not None and len(pbmon):
+        pg_ = pbmon[pbmon['Source Code'] == e['code']]
+        for _, r in pg_.sort_values('net', ascending=False).iterrows():
+            e['pbgGifts'].append(dict(name=r['Contact Name'], amt=round(float(r['net']), 2), day=int(r['day'])))
+    e['pbgCodeAmt'] = round(float(sum(g['amt'] for g in e['pbgGifts'])), 2)
     seen_v = set(); e['roomCamp'] = 0.0; e['hostLevel'] = 0
     tier = max(2500, e['max'] * 0.5)
     for g in e['gifts']:
         if g['amt'] >= tier: e['hostLevel'] += 1
         if g['v'] in seen_v: continue
         seen_v.add(g['v']); e['roomCamp'] += g['life']
-    e['roomCamp'] = round(e['roomCamp'], 2); e['roomTotal'] = round(e['roomCamp'] + e['pbgAmt'], 2)
+    e['roomCamp'] = round(e['roomCamp'], 2); e['roomTotal'] = round(e['roomCamp'] + e['pbgAmt'] + e.get('pbgCodeAmt', 0), 2)
 events.sort(key=lambda e: (e['date'] or 0))
 
 # ---- hosts rollup ---------------------------------------------------------------------------------
