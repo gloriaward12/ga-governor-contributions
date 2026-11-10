@@ -28,7 +28,7 @@ const COLS = {
 };
 const DSNAME = { donors: 'Donors', gifts: 'Event gifts', events: 'Events', hosts: 'Hosts', codes: 'Source codes', months: 'Raised by month', recon: 'Books vs filings', overLimit: 'Over the limit', missingInfo: 'Missing employer or occupation', household: 'Households at the limit', duplicates: 'Possible duplicate records', refunds: 'Refunds' };
 const DSNOTE = {
-  donors: 'Donors at $250+ lifetime plus every event donor, from the NGP export. Battleground is the leadership committee as filed with the Commission (its own export replaces this).',
+  donors: 'Donors at $250+ lifetime plus every event donor, from the NGP export. Battleground is from the leadership committee\'s own NGP export, matched by exact name (the committees are separate databases).',
   gifts: 'Every gift that carried an event source code.', events: 'All fundraisers, from the events list and the contributions.', hosts: 'Hosts rolled up across their events; the donor match is by surname and is a lead to verify.',
   codes: 'Every source code in the export.', months: 'Monthly totals with the channel split.', recon: 'NGP against the Commission filings by month; the Commission line includes in-kind, so compare against NGP all types.',
   overLimit: 'Individuals whose gifts in one election exceed the limit ($8,400 primary or general; $4,800 runoff). Refund the excess or redesignate before the next filing.',
