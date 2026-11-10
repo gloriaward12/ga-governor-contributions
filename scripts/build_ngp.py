@@ -53,6 +53,9 @@ ev['Date'] = pd.to_datetime(ev['Date'])
 ev['Source Code'] = ev['Source Code'].fillna('').astype(str).str.strip().replace({'nan': ''})
 EVENT_CODES = set(ev['Source Code']) - {''}
 EVENT_RX = re.compile(r'^(\d{8}|\d{4}_\d{4}|[A-Z]{2,4}\d{6,8}|\d{6}[A-Za-z])')
+# programs that behave like events for recognition: their own page, their own donor list
+PROGRAMS = {'MillionMen': ('Men for Keisha (Million Men)', 'Men for Keisha'), 'KLB_WomenCount': ('Women for Keisha (online page)', 'Women for Keisha')}
+EVENT_CODES |= set(PROGRAMS)
 
 def channel(code):
     c = code if isinstance(code, str) else ''
@@ -125,6 +128,10 @@ for _, r in ev.iterrows():
                        firstDay=int(s['firstDay']) if s is not None else None, lastDay=int(s['lastDay']) if s is not None else None))
 for code, s in stats.iterrows():
     if code in seen: continue
+    if code in PROGRAMS:
+        events.append(dict(date=int(s['firstDay']), name=PROGRAMS[code][0], location='', type='Program', code=code, host=PROGRAMS[code][1], listed=False, invited=0, confirmed=0, completed=0,
+                           n=int(s['n']), amt=round(float(s['amt']), 2), donors=int(s['donors']), firstTime=int(s['firstTime']), max=round(float(s['mx']), 2), ga=round(float(s['ga']), 3), firstDay=int(s['firstDay']), lastDay=int(s['lastDay'])))
+        continue
     m = re.match(r'^(\d{4})(\d{2})(\d{2})', code) or None
     dte = None
     try:
