@@ -16,9 +16,10 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 /* public page rail */
 .rail{background:#fff;border-right:1px solid var(--rule);box-shadow:none}
 .rail .brand{color:var(--ink)}.rail .brand small{color:var(--muted)}
-#cand{background:var(--rail-2);border-color:var(--rule);color:var(--ink);border-radius:10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%235F6B7A' stroke-width='1.5'/%3E%3C/svg%3E")}
+#cand{background-color:var(--rail-2);border-color:var(--rule);color:var(--ink);border-radius:10px;background-repeat:no-repeat;background-position:right 10px center;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%235F6B7A' stroke-width='1.5'/%3E%3C/svg%3E")}
 .rail label.rl{color:var(--muted)}
-.tabs button{color:var(--ink2);border-left:0;border-radius:10px;padding:9px 12px;margin:1px 0}
+.tabs button{color:var(--ink2);border-left:0;border-top:0;border-radius:10px;padding:9px 12px;margin:1px 0}
+.tabs .sep,.tabs hr{border-color:var(--rule)}
 .tabs button:hover{background:var(--rail-2)}
 .tabs button[aria-selected="true"]{background:var(--blue-wash);color:var(--blue-2);font-weight:600;border-left:0}
 .rail .foot,.rail .asof,.rail small{color:var(--muted)}
@@ -92,3 +93,5 @@ button[type=submit]:hover{background:var(--blue-2)}
 .tabs button[data-tab="field"][aria-selected="true"],.tabs button[data-tab="pbg"][aria-selected="true"]{color:var(--blue-2)}
 .tabs button[data-tab="field"],.tabs button[data-tab="pbg"]{color:var(--ink2)}
 @media (max-width:640px){.tabs button[aria-selected="true"]{background:var(--blue-wash);border-bottom-color:transparent}}
+.tabs button[data-tab="field"]{border-top:1px solid var(--rule);border-radius:0 0 10px 10px;margin-top:14px;padding-top:12px}
+.tabs button[data-tab="field"][aria-selected="true"]{border-radius:10px;border-top-color:transparent}
