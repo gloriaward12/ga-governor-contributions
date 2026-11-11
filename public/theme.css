@@ -1,0 +1,94 @@
+/* Governor Pulse — soft corporate theme. Loaded last; overrides the page defaults. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --blue:#1A5FD1;--blue-2:#134AA8;--blue-wash:#EAF1FC;--blue-soft:#D6E4F9;
+  --rail:#FFFFFF;--rail-2:#F2F5F9;--rail-ink:#1F2A37;--rail-mute:#5F6B7A;
+  --field:#F4F6FA;--paper:#FFFFFF;--ink:#1F2A37;--ink2:#52606F;--muted:#8591A0;--rule:#E3E8EF;--rule-2:#EEF2F6;
+  --gold:var(--blue);--gold-2:var(--blue-2);--gold-wash:var(--blue-wash);--accent:var(--blue);
+  --s1:var(--blue);--seq400:var(--blue);--seq500:var(--blue-2);--seq600:#0E3A86;
+  --good:#1E8E4A;--crit:#D64545;
+  --radius:12px;--shadow:0 1px 2px rgba(16,24,40,.04),0 6px 16px rgba(16,24,40,.06);
+}
+body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--field);color:var(--ink);font-size:14.5px}
+svg text{font-family:"Inter",system-ui,sans-serif}
+h1,h2,h3{font-weight:600;letter-spacing:-.01em}
+
+/* public page rail */
+.rail{background:#fff;border-right:1px solid var(--rule);box-shadow:none}
+.rail .brand{color:var(--ink)}.rail .brand small{color:var(--muted)}
+#cand{background:var(--rail-2);border-color:var(--rule);color:var(--ink);border-radius:10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%235F6B7A' stroke-width='1.5'/%3E%3C/svg%3E")}
+.rail label.rl{color:var(--muted)}
+.tabs button{color:var(--ink2);border-left:0;border-radius:10px;padding:9px 12px;margin:1px 0}
+.tabs button:hover{background:var(--rail-2)}
+.tabs button[aria-selected="true"]{background:var(--blue-wash);color:var(--blue-2);font-weight:600;border-left:0}
+.rail .foot,.rail .asof,.rail small{color:var(--muted)}
+.fin{border:1px solid var(--rule);border-radius:10px;color:var(--ink);background:var(--rail-2)}
+.fin span{color:var(--muted)}.fin:hover{border-color:var(--blue);background:var(--blue-wash)}
+
+/* finance headers */
+header{background:#fff;color:var(--ink);border-bottom:1px solid var(--rule)}
+header .brand{color:var(--ink)}header .brand small{color:var(--muted)}
+header nav a{color:var(--ink2);border-bottom:0;border-radius:999px;padding:7px 12px}
+header nav a:hover{background:var(--rail-2)}
+header nav a.on{color:var(--blue-2);background:var(--blue-wash);border-bottom:0;font-weight:600}
+
+/* surfaces */
+.card,.kpis,.tw,.searchbox,.panel,.results,.hit,.big,.calc,.peer{border:1px solid var(--rule);border-radius:var(--radius);box-shadow:var(--shadow)}
+.tile{border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2)}
+.kpis .tile:first-child{background:var(--blue-wash)}.kpis .tile:first-child .v{color:var(--blue-2)}
+.tile .v{font-weight:700;letter-spacing:-.02em}
+.notice{background:var(--blue-wash);border:1px solid var(--blue-soft);border-radius:var(--radius);color:var(--ink)}
+.segs{border-bottom:1px solid var(--rule);gap:6px}
+.seg{border-radius:999px 999px 0 0;padding:9px 14px}
+.seg.on{color:var(--blue-2);border-bottom-color:var(--blue)}
+.pill{border-radius:999px;border-color:var(--rule);background:#fff}
+.pill.ok{background:#E9F6EE;border-color:#BFE3C7;color:var(--good)}
+.pill.hot{background:#FDECEC;border-color:#F3C2C2;color:var(--crit)}
+.pill.gold{background:var(--blue-wash);border-color:var(--blue-soft);color:var(--blue-2)}
+.chip{border-radius:999px;background:var(--rail-2)}
+
+/* controls */
+.btn,button.btn{border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink);height:36px;padding:0 16px;font-weight:600;box-shadow:0 1px 1px rgba(16,24,40,.03)}
+.btn:hover,button.btn:hover{border-color:var(--blue);color:var(--blue-2);background:var(--blue-wash)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue-2);color:#fff}
+input[type=search],input[type=text],input[type=number],input[type=date],input[type=password],select,.f input,.f select{border:1px solid var(--rule);border-radius:10px;background:#fff;height:38px;padding:0 12px}
+input:focus,select:focus{outline:2px solid var(--blue-soft);border-color:var(--blue)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.searchbox input{height:48px;border-radius:12px;font-size:16px}
+#ftoggle{border-radius:999px}
+.preset{border-radius:10px}.preset.on{border-color:var(--blue);background:var(--blue-wash)}
+
+/* tables */
+th{color:var(--ink2);font-weight:600;background:#fff}
+tbody tr:hover td{background:#F8FAFD}
+table.cmb thead tr:first-child th{background:var(--rail-2)}
+.cmb-card{border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* bars and charts */
+.bars .b,.hbars .r .trk i{background:var(--blue);border-radius:4px}
+.bars .b.gold{background:var(--blue-2)}
+.months .m .c{background:var(--blue);border-radius:4px 4px 0 0}.months .m .u{background:var(--blue-soft)}
+.prog i{background:var(--blue)}
+
+/* login */
+.login,.box{border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--rule)}
+.login .btn,.box .btn,button[type=submit]{background:var(--blue);border-color:var(--blue);color:#fff;border-radius:999px;font-weight:600}
+button[type=submit]:hover{background:var(--blue-2)}
+
+/* drawer and toast */
+.drawer{border-radius:16px 0 0 16px;box-shadow:-12px 0 32px rgba(16,24,40,.12)}
+.toast{border-radius:999px;background:var(--ink)}
+
+/* phone */
+@media (max-width:640px){
+  .rail{border-right:0;border-bottom:1px solid var(--rule)}
+  .tabs button{border-radius:999px;padding:7px 12px}
+  .tabs button[aria-selected="true"]{border-bottom:0}
+  header nav a{padding:6px 10px;font-size:13px}
+  .btn,button.btn{height:34px}
+}
+.tabs button[aria-selected="true"]{background:var(--blue-wash);color:var(--blue-2)}
+.tabs button[data-tab="field"][aria-selected="true"],.tabs button[data-tab="pbg"][aria-selected="true"]{color:var(--blue-2)}
+.tabs button[data-tab="field"],.tabs button[data-tab="pbg"]{color:var(--ink2)}
+@media (max-width:640px){.tabs button[aria-selected="true"]{background:var(--blue-wash);border-bottom-color:transparent}}
