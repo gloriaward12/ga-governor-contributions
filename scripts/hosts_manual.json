@@ -1,4 +1,16 @@
 {
-  "20250922_ATL_Kerry Stewart": {"host": "Kerry Stewart", "hostNames": ["Stewart, Kerry"], "name": "September 22, 2025 reception with Kerry Stewart, Forth Hotel rooftop"},
-  "GA102526BCGW": {"host": "Kerry Stewart (co-host) and others", "hostNames": ["Stewart, Kerry"], "name": "October 25, 2026 fundraiser (BCGW), Project Battleground Georgia"}
+ "20250922_ATL_Kerry Stewart": {
+  "host": "Kerry Stewart",
+  "hostNames": [
+   "Stewart, Kerry"
+  ],
+  "name": "September 22, 2025 reception with Kerry Stewart, Forth Hotel rooftop"
+ },
+ "GA102526BCGW": {
+  "host": "Kerry Stewart",
+  "hostNames": [
+   "Stewart, Kerry"
+  ],
+  "name": "October 25, 2026 fundraiser (BCGW; Kerry Stewart co-host), Project Battleground Georgia"
+ }
 }
