@@ -18,6 +18,14 @@ PBG_CODES = None
 if '--pbg-codes' in args: i = args.index('--pbg-codes'); PBG_CODES = args[i + 1]; del args[i:i + 2]
 PBG_PART = None
 if '--pbg-participants' in args: i = args.index('--pbg-participants'); PBG_PART = args[i + 1]; del args[i:i + 2]
+PBG_GUESTS = None
+if '--pbg-guests' in args: i = args.index('--pbg-guests'); PBG_GUESTS = args[i + 1]; del args[i:i + 2]
+PBG_ATTR = None
+if '--pbg-attributions' in args: i = args.index('--pbg-attributions'); PBG_ATTR = args[i + 1]; del args[i:i + 2]
+GUESTS = pd.read_pickle(PBG_GUESTS) if PBG_GUESTS else None
+if GUESTS is not None:
+    GUESTS['p'] = pd.to_numeric(GUESTS['Purchase Price'], errors='coerce').fillna(0)
+ATTR = pd.read_pickle(PBG_ATTR) if PBG_ATTR else None
 CODE_NAMES = {}
 if PBG_CODES:
     _c = pd.read_pickle(PBG_CODES) if PBG_CODES.endswith('.pkl') else pd.read_csv(PBG_CODES, sep='\t', encoding='utf-16', dtype=str)
@@ -199,7 +207,11 @@ if pbmon is not None and len(pbmon):
                     rows_ = same_day[same_day['Event Name'] == nm] if nm in set(same_day['Event Name']) else same_day
                     gave_v = set(g['VANID'].astype(str))
                     attendees = [dict(name=r_['Contact Name'], gave=str(r_['VANID']) in gave_v) for _, r_ in rows_.iterrows()]
-        events.append(dict(date=day(dte) if dte is not None else int(g['day'].max()), name=(nm or code.replace('_', ' ')), location='', type='Battleground event', code=code, host=host_from('', code), listed=False,
+        tickets = []
+        if GUESTS is not None and nm and nm in set(GUESTS['Event Name']):
+            for _, t_ in GUESTS[GUESTS['Event Name'] == nm].sort_values('p', ascending=False).iterrows():
+                tickets.append(dict(name=t_['Contact Name'], level=str(t_['Ticket Level']), price=round(float(t_['p']), 2), guest=(t_['Guest Full Name'] if isinstance(t_['Guest Full Name'], str) else '')))
+        events.append(dict(date=day(dte) if dte is not None else int(g['day'].max()), name=(nm or code.replace('_', ' ')), location='', type='Battleground event', tickets=tickets, hostTickets=sorted({t_['name'] for t_ in tickets if t_['level'].lower().startswith('host')}), code=code, host=host_from('', code), listed=False,
                            invited=0, confirmed=len(attendees), completed=0, n=0, amt=0.0, donors=0, firstTime=0, max=0.0, ga=None, firstDay=int(g['day'].min()), lastDay=int(g['day'].max()), pbgOnly=True, attendees=attendees))
         seen.add(code)
 for e in events:
@@ -435,7 +447,12 @@ for vid, r in keep.iterrows():
                        lead=round(float(lead_for(int(vid), r)), 2),
                        pbgFiled=filed_for(r['name'], r['state'])))
 
-out = dict(generated=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC'), asof=int(mon['day'].max()), rows=int(len(mon)), total=round(float(mon['net'].sum()), 2),
+attributions = []
+if ATTR is not None and len(ATTR):
+    ATTR['amt'] = pd.to_numeric(ATTR['Attribution Amount'], errors='coerce').fillna(0)
+    for (nm_, code_), g_ in ATTR.groupby(['Contact Name', 'Source Code']):
+        attributions.append(dict(name=nm_, code=code_, amt=round(float(g_['amt'].sum()), 2), n=int(len(g_)), committee='Project Battleground Georgia'))
+out = dict(attributions=attributions, generated=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC'), asof=int(mon['day'].max()), rows=int(len(mon)), total=round(float(mon['net'].sum()), 2),
            donors=int(mon['VANID'].nunique()), recurring=int(len(rec)), recurringAmt=round(float(mon[mon['VANID'].isin(rec)]['net'].sum()), 2),
            tiers=tiers, channels=channels, codes=codes, months=months, events=events, hosts=hosts, recon=recon, pbg=pbg, pbgFiled=bool(pbg_filed), list=donors)
 json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
