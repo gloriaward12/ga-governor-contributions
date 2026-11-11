@@ -258,6 +258,11 @@ if pbmon is not None and len(pbmon):
     for vid, r in pg.iterrows():
         pb_by_vid[int(vid)] = r; pb_by_name[(str(r['name']).lower(), str(r['state']))] = r
         pb_by_name[str(r['name']).lower()] = r   # name-only fallback (best campaign record only)
+        mcouple = re.match(r'^(.+?),\s*(.+?)\s+(?:and|&)\s+(.+)$', str(r['name']).strip(), re.I)   # "Williams, Lynn and Sheryl": a couple record counts for both names
+        if mcouple:
+            for first in (mcouple.group(2), mcouple.group(3)):
+                k_ = f"{mcouple.group(1)}, {first}".lower().strip()
+                if k_ not in pb_by_name: pb_by_name[k_] = r
         if str(r.get('zip', '')): pb_by_name[(str(r['name']).lower(), 'zip:' + str(r['zip']))] = r
     # the two committees are separate VAN databases (no VANID overlap), so credit a Battleground gift to the campaign's
     # highest-giving record of that exact name, not to every namesake
@@ -309,6 +314,7 @@ for (ln, z), vids in hh.items():
         tot = float(sum(per.loc[v, p_] for v in vids if v in per.index))
         if tot >= lim * len(vids) - 0.5:   # every member at the limit: the household has nowhere left to give the campaign
             household.append(dict(household=f"{agg.loc[vids[0], 'name'].split(',')[0]} ({z})", members=[dict(v=int(v), name=agg.loc[v, 'name'], gave=round(float(per.loc[v, p_]) if v in per.index else 0, 2)) for v in vids], period=plabel(p_), gave=round(tot, 2), limit=lim, n=len(vids)))
+_seen_h = set(); household = [h for h in household if not ((h['household'], h['period']) in _seen_h or _seen_h.add((h['household'], h['period'])))]
 household.sort(key=lambda x: -x['gave'])
 missing = []
 for vid, r in agg.iterrows():
