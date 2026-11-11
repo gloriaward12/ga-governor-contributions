@@ -116,6 +116,37 @@ function briefText() {
   if (S.spent) s.push(`The committee has reported ${fmt$(S.spent)} in spending${S.coh != null ? (S.est ? ` and roughly ${fmt$(S.coh)} left (raised less spent; the Commission publishes no registry balance for non-candidate committees)` : ` and ${fmt$(S.coh)} cash on hand per the Commission's registry`) : ''}${S.runway != null ? `, about ${S.runway.toFixed(1)} months of runway at the recent burn of ${fmt$(S.burn)} per month` : ''}.`);
   return s.join(' ');
 }
+// When the search names a person (five or fewer matching donors across both committees), the briefing is about them.
+let briefSeq = 0;
+function donorBrief(brief) {
+  const q = (state.q || '').toLowerCase().split(/\s+/).filter(Boolean); if (!q.length) return;
+  const pair = xcPair(); if (pair.length !== 2) return; const seq = ++briefSeq;
+  Promise.all(pair.map(xcData)).then(Ps => {
+    if (seq !== briefSeq || tab !== 'overview') return;
+    const short = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).short || String(id));
+    const maps = Ps.map(cmbRecordsOf); const all = new Map();
+    maps.forEach((m, ci) => { for (const [k, o] of m) { let r = all.get(k); if (!r) { r = { k, name: o.name, city: o.city, state: o.state, emp: o.emp, occ: o.occ, per: [0, 0], n: [0, 0], total: 0, gifts: 0, first: 1e9, last: -1 }; all.set(k, r); } r.per[ci] += o.total; r.n[ci] += o.n; r.total += o.total; r.gifts += o.n; if (o.last > r.last) r.last = o.last; if (o.first < r.first) r.first = o.first; if (!r.emp && o.emp) { r.emp = o.emp; r.occ = o.occ; } } });
+    const rows = [...all.values()].filter(r => r.gifts > 0 && r.total > 0); const byTotal = [...rows].sort((a, b) => b.total - a.total); byTotal.forEach((r, i) => r.rank = i + 1);
+    pair.forEach((id, ci) => { rows.filter(r => r.per[ci] > 0).sort((a, b) => b.per[ci] - a.per[ci]).forEach((r, i) => { r['rank' + ci] = i + 1; }); });
+    const hit = rows.filter(r => q.every(t => (r.name + ' ' + r.emp + ' ' + r.occ + ' ' + r.city).toLowerCase().includes(t)));
+    if (!hit.length || hit.length > 5) return;
+    const tier = v => v >= 100000 ? '$100,000 and up' : v >= 25000 ? '$25,000 to $99,999' : v >= 8400 ? '$8,400 to $24,999' : v >= 1000 ? '$1,000 to $8,399' : 'under $1,000';
+    const paras = hit.map(r => {
+      const gifts = Ps.map((P, ci) => cmbGiftsOf(P, r.k).map(g => ({ ...g, ci }))).flat();
+      const camp = gifts.filter(g => g.ci === 0 && !g.refund); const pri = camp.filter(g => /primary/i.test(g.elec) && !/runoff/i.test(g.elec)).reduce((s, g) => s + g.amt, 0), gen = camp.filter(g => /general/i.test(g.elec)).reduce((s, g) => s + g.amt, 0);
+      const largest = gifts.filter(g => !g.refund).sort((a, b) => b.amt - a.amt)[0]; const refunds = gifts.filter(g => g.refund).reduce((s, g) => s + g.amt, 0);
+      const days = D.maxDay - r.last; const who = `${r.name}${r.city ? ' of ' + r.city + (r.state ? ', ' + r.state : '') : ''}${r.emp ? ` (${r.occ ? r.occ + ', ' : ''}${r.emp})` : ''}`;
+      const s = [];
+      s.push(`${who} has given ${fmt$(r.total)} across both committees: ${r.per[0] ? `${fmt$(r.per[0])} to ${short[0]} (#${r.rank0} on that committee)` : `nothing to ${short[0]}`} and ${r.per[1] ? `${fmt$(r.per[1])} to ${short[1]} (#${r.rank1})` : `nothing to ${short[1]}`}, which ranks #${r.rank} of ${fmtN(byTotal.length)} combined donors, in the ${tier(r.total)} band.`);
+      s.push(`${fmtN(r.gifts)} itemized gift${r.gifts === 1 ? '' : 's'} between ${dayStr(r.first)} and ${dayStr(r.last)}${largest ? `; the largest was ${fmt$(largest.amt)} to ${short[largest.ci]} on ${dayStr(largest.day)}` : ''}${refunds ? `; ${fmt$(refunds)} was refunded` : ''}. The most recent gift was ${days === 0 ? 'today' : days + ' days ago'}.`);
+      if (r.per[0]) { const roomP = Math.max(0, LIMITS.Primary - pri), roomG = Math.max(0, LIMITS.General - gen); s.push(pri >= LIMITS.Primary && gen >= LIMITS.General ? `Maxed to the campaign for both the primary and the general; any further giving goes to ${short[1]}.` : `To the campaign: ${fmt$(pri)} for the primary and ${fmt$(gen)} for the general, leaving ${fmt$(roomP + roomG)} of room under the $8,400 limits${roomP + roomG === 0 ? '' : ` (${fmt$(roomP)} primary, ${fmt$(roomG)} general)`}; ${short[1]} has no limit.`); }
+      else s.push(`No campaign gift on file, so the full $8,400 primary and general limits are open; ${short[1]} has no limit.`);
+      return s.join(' ');
+    });
+    brief.innerHTML = `<div class="brief-h"><h3>Briefing: ${esc(hit.length === 1 ? hit[0].name : hit.length + ' donors matching "' + state.q + '"')}</h3><span class="muted small">From the Commission filings for both committees. Gifts under $100 per election are not itemized and are not counted here.</span><button class="btn" id="printBrief">Print brief</button></div>${paras.map(p => `<p>${esc(p)}</p>`).join('')}<p class="small muted">Clear the search to return to the committee briefing. Events hosted, source codes and the campaign's own books are in the Finance area.</p>`;
+    const pb = brief.querySelector('#printBrief'); if (pb) pb.addEventListener('click', () => window.print());
+  }).catch(() => {});
+}
 function donorAggAll() { const save = SEL; SEL = []; for (let i = 0; i < N; i++) if (D.det.ttype[i] === D.ttIdx['Contribution'] || D.det.ttype[i] === D.ttIdx['Return Contribution']) SEL.push(i); const r = donorAgg(); SEL = save; return r; }
 
 // ---------- overview (extended) ----------
@@ -126,6 +157,7 @@ function renderOverview(main) {
   const brief = document.createElement('div'); brief.className = 'brief';
   brief.innerHTML = `<div class="brief-h"><h3>Briefing</h3><span class="muted small">Generated from the filings; covers the full committee record regardless of filters.</span><button class="btn" id="printBrief">Print brief</button></div><p>${esc(briefText())}</p>`;
   main.insertBefore(brief, main.firstChild);
+  donorBrief(brief);
   const mom = document.createElement('div'); mom.className = 'card'; mom.style.marginTop = '14px';
   const tile = (l, v, d) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
   mom.innerHTML = `<h3>Momentum</h3><div class="note">Receipts in the most recent windows of the record (through ${dayStr(M.end)}), compared with the window before. Full committee record, not filtered. The most recent days only include gifts large enough to trigger a Two-Business-Day report, so the 7-day figure usually understates.</div>
