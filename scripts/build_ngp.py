@@ -14,6 +14,19 @@ PBG = None
 if '--pbg' in args: i = args.index('--pbg'); PBG = args[i + 1]; del args[i:i + 2]
 PBG_FILED = None
 if '--pbg-filed' in args: i = args.index('--pbg-filed'); PBG_FILED = args[i + 1]; del args[i:i + 2]
+PBG_CODES = None
+if '--pbg-codes' in args: i = args.index('--pbg-codes'); PBG_CODES = args[i + 1]; del args[i:i + 2]
+PBG_PART = None
+if '--pbg-participants' in args: i = args.index('--pbg-participants'); PBG_PART = args[i + 1]; del args[i:i + 2]
+CODE_NAMES = {}
+if PBG_CODES:
+    _c = pd.read_pickle(PBG_CODES) if PBG_CODES.endswith('.pkl') else pd.read_csv(PBG_CODES, sep='\t', encoding='utf-16', dtype=str)
+    for _, r in _c.iterrows():
+        if isinstance(r.get('Description'), str) and r['Description'].strip(): CODE_NAMES[str(r['Name']).strip()] = r['Description'].strip()
+PART = None
+if PBG_PART:
+    PART = pd.read_pickle(PBG_PART) if PBG_PART.endswith('.pkl') else pd.read_csv(PBG_PART, sep='\t', encoding='utf-16', dtype=str)
+    PART['Event Date'] = pd.to_datetime(PART['Event Date'], errors='coerce')
 SRC, EVF = args[0], args[1]
 COMM = args[2] if len(args) > 2 else None
 OUT = 'public/finance/ngp.json'
@@ -145,6 +158,7 @@ for code, s in stats.iterrows():
     if code in PROGRAMS:
         events.append(dict(date=int(s['firstDay']), name=PROGRAMS[code][0], location='', type='Program', code=code, host=PROGRAMS[code][1], listed=False, invited=0, confirmed=0, completed=0,
                            n=int(s['n']), amt=round(float(s['amt']), 2), donors=int(s['donors']), firstTime=int(s['firstTime']), max=round(float(s['mx']), 2), ga=round(float(s['ga']), 3), firstDay=int(s['firstDay']), lastDay=int(s['lastDay'])))
+        seen.add(code)
         continue
     m = re.match(r'^(\d{4})(\d{2})(\d{2})', code) or None
     dte = None
@@ -170,9 +184,26 @@ if pbmon is not None and len(pbmon):
             elif re.match(r'^\d{8}', code): dte = dt.datetime.strptime(code[:8], '%Y%m%d')
             elif re.match(r'^\d{6}[A-Za-z]', code): dte = dt.datetime.strptime(code[:6], '%m%d%y')
         except Exception: dte = None
-        events.append(dict(date=day(dte) if dte is not None else int(g['day'].max()), name=code.replace('_', ' ') + ' (Battleground)', location='', type='Battleground event', code=code, host=host_from('', code), listed=False,
-                           invited=0, confirmed=0, completed=0, n=0, amt=0.0, donors=0, firstTime=0, max=0.0, ga=None, firstDay=int(g['day'].min()), lastDay=int(g['day'].max()), pbgOnly=True))
+        nm = CODE_NAMES.get(code)
+        attendees = []
+        if PART is not None and dte is not None:
+            same_day = PART[PART['Event Date'].dt.date == dte.date()]
+            if len(same_day):
+                if not nm:
+                    top = same_day.groupby('Event Name').size().sort_values(ascending=False)
+                    GEN = {'fund', 'event', 'her', 'west', 'coast', 'park', 'city', 'main', 'the', 'and'}
+                    toks_ = [t.lower() for t in re.findall(r'[A-Z][a-z]{2,}', code) if t.lower() not in GEN]
+                    scored = sorted(((sum(1 for t in toks_ if t in n_.lower()), top[n_], n_) for n_ in top.index), reverse=True)
+                    nm = scored[0][2] if scored and scored[0][0] > 0 else (top.index[0] if len(top) == 1 else None)
+                if nm:
+                    rows_ = same_day[same_day['Event Name'] == nm] if nm in set(same_day['Event Name']) else same_day
+                    gave_v = set(g['VANID'].astype(str))
+                    attendees = [dict(name=r_['Contact Name'], gave=str(r_['VANID']) in gave_v) for _, r_ in rows_.iterrows()]
+        events.append(dict(date=day(dte) if dte is not None else int(g['day'].max()), name=(nm or code.replace('_', ' ')), location='', type='Battleground event', code=code, host=host_from('', code), listed=False,
+                           invited=0, confirmed=len(attendees), completed=0, n=0, amt=0.0, donors=0, firstTime=0, max=0.0, ga=None, firstDay=int(g['day'].min()), lastDay=int(g['day'].max()), pbgOnly=True, attendees=attendees))
         seen.add(code)
+for e in events:
+    if e['code'] in CODE_NAMES and not e.get('pbgOnly') and CODE_NAMES[e['code']].lower() not in e['name'].lower(): e['codeDesc'] = CODE_NAMES[e['code']]
 for e in events:
     if e['code'] in MANUAL:
         e['host'] = MANUAL[e['code']].get('host', e['host']); e['hostNames'] = MANUAL[e['code']].get('hostNames', [])
@@ -208,10 +239,14 @@ pbg = None; pb_by_vid = {}; pb_by_name = {}; best_by_name = {}
 if pbmon is not None and len(pbmon):
     pbmon = pbmon[~pbmon['Contact Name'].str.lower().isin(['keisha for governor', 'keisha for governor inc'])].copy()   # transfers from the campaign are not donors
     pbmon['channel'] = pbmon['Source Code'].map(channel)
-    pg = pbmon.groupby('VANID').agg(name=('Contact Name', 'first'), state=('Home State/Province', 'first'), total=('net', 'sum'), n=('net', 'size'), first=('day', 'min'), last=('day', 'max'), mx=('net', 'max'))
+    for c_ in ['Home City', 'Home Zip/Postal', 'Employer', 'Occupation']:
+        if c_ not in pbmon: pbmon[c_] = ''
+    pbmon['Home Zip/Postal'] = pbmon['Home Zip/Postal'].fillna('').astype(str).str[:5]
+    pg = pbmon.groupby('VANID').agg(name=('Contact Name', 'first'), state=('Home State/Province', 'first'), city=('Home City', 'first'), zip=('Home Zip/Postal', 'first'), emp=('Employer', 'first'), occ=('Occupation', 'first'), total=('net', 'sum'), n=('net', 'size'), first=('day', 'min'), last=('day', 'max'), mx=('net', 'max'))
     for vid, r in pg.iterrows():
         pb_by_vid[int(vid)] = r; pb_by_name[(str(r['name']).lower(), str(r['state']))] = r
-        if not str(r['state']): pb_by_name[str(r['name']).lower()] = r   # export without addresses: match on name alone, best campaign record only
+        pb_by_name[str(r['name']).lower()] = r   # name-only fallback (best campaign record only)
+        if str(r.get('zip', '')): pb_by_name[(str(r['name']).lower(), 'zip:' + str(r['zip']))] = r
     # the two committees are separate VAN databases (no VANID overlap), so credit a Battleground gift to the campaign's
     # highest-giving record of that exact name, not to every namesake
     best_by_name = {}
@@ -225,11 +260,11 @@ if pbmon is not None and len(pbmon):
                codes=[dict(code=r['Source Code'] or '(blank)', channel=r['channel'], n=int(r['n']), amt=round(float(r['amt']), 2), donors=int(r['donors'])) for _, r in pcodes.iterrows()],
                months=pmonths,
                tiers=[dict(label=l, donors=int(m.sum()), amt=round(float(ptot[m].sum()), 2)) for l, m in [('Under $1,000', ptot < 1000), ('$1,000 to $9,999', (ptot >= 1000) & (ptot < 10000)), ('$10,000 to $49,999', (ptot >= 10000) & (ptot < 50000)), ('$50,000 and up', ptot >= 50000)]],
-               top=[dict(name=r['name'], state=r['state'], total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).head(300).iterrows()])
+               top=[dict(name=r['name'], state=r['state'], city=r.get('city', ''), emp=r.get('emp', ''), occ=r.get('occ', ''), total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).head(300).iterrows()])
     # Battleground donors not in the campaign list at all
     camp_names = {(str(n).lower(), str(st)) for n, st in zip(agg['name'], agg['state'])}
     camp_lower = {str(n).lower() for n in agg['name']}
-    pbg['onlyThere'] = [dict(name=r['name'], state=r['state'], total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).iterrows() if int(_) not in agg.index and str(r['name']).lower() not in camp_lower][:500]
+    pbg['onlyThere'] = [dict(name=r['name'], state=r['state'], city=r.get('city', ''), emp=r.get('emp', ''), total=round(float(r['total']), 2), n=int(r['n']), last=int(r['last'])) for _, r in pg.sort_values('total', ascending=False).iterrows() if int(_) not in agg.index and str(r['name']).lower() not in camp_lower][:500]
 
 # ---- compliance guard -----------------------------------------------------------------------------
 ORG_RX = re.compile(r'\b(LLC|L\.L\.C|Inc|Incorporated|PAC|Corp|Corporation|Company|Co\.|Associates|Group|Partners|Partnership|Committee|Fund|Trust|Foundation|Holdings|Enterprises|Services|Solutions|Church|Association|Union|Local \d+|LLP|PC|PLLC)\b', re.I)
@@ -380,7 +415,8 @@ if COMM:
                  months=[dict(month=m, ngp=months.get(m, {}).get('amt', 0), ngpAll=round(float(allm.get(m, 0)), 2), commission=round(float(cm.get(m, 0)), 2)) for m in sorted(set(months) | set(cm))])
 
 def lead_for(vid, r):
-    if vid in pb_by_vid: return pb_by_vid[vid]['total']
+    kz = (str(r['name']).lower(), 'zip:' + str(r['zip'])[:5])
+    if kz in pb_by_name: return pb_by_name[kz]['total']
     k = (str(r['name']).lower(), str(r['state']))
     if k in pb_by_name: return pb_by_name[k]['total']
     nm = str(r['name']).lower()
