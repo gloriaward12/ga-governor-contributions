@@ -545,6 +545,31 @@ function cmbRecordsOf(P) {
   }
   cmbRecords.set(P, m); return m;
 }
+function cmbGiftsOf(P, k) {
+  const det = P.det, dict = P.dict, con = dict.ttype.indexOf('Contribution'), ret = dict.ttype.indexOf('Return Contribution'), xfer = dict.ctype.indexOf('Candidate / Candidate Committee');
+  const out = [];
+  for (let i = 0; i < det.tid.length; i++) { const t = det.ttype[i]; if (t !== con && t !== ret) continue; if (det.ctype[i] === xfer) continue; if (cmbKeyOf(dict, det, i) !== k) continue;
+    out.push({ day: det.day[i], amt: det.cents[i] / 100, refund: t === ret, kind: dict.ttype[t], report: dict.report ? dict.report[det.report[i]] : '', elec: dict.etype ? (dict.etype[det.etype[i]] || '') + (dict.eyear && det.eyear ? ' ' + dict.eyear[det.eyear[i]] : '') : '', emp: dict.emp[det.emp[i]], occ: dict.occ[det.occ[i]], city: dict.city[det.city[i]] }); }
+  return out.sort((a, b) => b.day - a.day);
+}
+function cmbProfileHtml(rows, Ps, names, short, byTotal) {
+  return rows.map(r => {
+    const gifts = Ps.map((P, ci) => cmbGiftsOf(P, r.k).map(g => ({ ...g, ci })));
+    const all = gifts.flat().sort((a, b) => b.day - a.day);
+    return `<div class="card" style="margin-top:14px"><h3 style="margin-bottom:2px">${esc(r.name)} <span class="pill">#${r.rank} of ${fmtN(byTotal.length)} overall</span></h3>
+      <div class="note">${esc(r.city)}${r.state ? ', ' + r.state : ''}${r.emp ? ' · ' + esc(r.emp) : ''}${r.occ ? ', ' + esc(r.occ) : ''}</div>
+      <div class="kpis" style="margin:10px 0 12px">
+        <div class="tile"><div class="l">Both committees</div><div class="v">${fmt$(r.total)}</div><div class="d">${fmtN(r.gifts)} itemized gifts, net of refunds</div></div>
+        <div class="tile"><div class="l">${esc(short[0])}</div><div class="v">${r.per[0] ? fmt$(r.per[0]) : '—'}</div><div class="d">${r.rank0 ? 'ranks #' + r.rank0 + ' on that committee' : 'did not give'}</div></div>
+        <div class="tile"><div class="l">${esc(short[1])}</div><div class="v">${r.per[1] ? fmt$(r.per[1]) : '—'}</div><div class="d">${r.rank1 ? 'ranks #' + r.rank1 + ' on that committee' : 'did not give'}</div></div>
+        <div class="tile"><div class="l">First and last gift</div><div class="v" style="font-size:16px">${dayStr(r.first)} – ${dayStr(r.last)}</div><div class="d">as filed with the Commission</div></div>
+      </div>
+      <div class="tw" style="max-height:50vh"><table><thead><tr><th>Date</th><th>Committee</th><th class="num">Amount</th><th>Election</th><th>Report</th><th>Employer on the filing</th></tr></thead><tbody>
+      ${all.map(g => `<tr><td>${dayStr(g.day)}</td><td>${esc(short[g.ci])}</td><td class="num">${g.refund ? '<span class="muted">refund ' + fmt$(g.amt) + '</span>' : '<b>' + fmt$(g.amt) + '</b>'}</td><td class="small">${esc(g.elec)}</td><td class="small muted">${esc(g.report)}</td><td class="small muted">${esc(g.emp)}${g.occ ? ', ' + esc(g.occ) : ''}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="note" style="margin-top:8px">This is the public record: every itemized gift the Commission has on file for this name across both committees. Gifts under $100 per election are not itemized and will not appear. The campaign's own books (events hosted, source codes, gifts under $100) are in the <a href="/finance/screens#q=${encodeURIComponent(r.name)}">Finance area</a> for those with the passcode.</div></div>`;
+  }).join('');
+}
 function cmbPairFor(id) { const pair = xcPair(); return pair.length === 2 && pair.includes(id) ? pair : null; }
 function cmbToggleHtml(on, pair) {
   if (!pair) return '';
@@ -574,7 +599,8 @@ function renderDonorsCombined(main) {
     const PS = 50, pages = Math.max(1, Math.ceil(rows.length / PS)); cmbPage = Math.min(cmbPage, pages - 1); const page = rows.slice(cmbPage * PS, (cmbPage + 1) * PS);
     const th = (k, l, num) => `<th class="${num ? 'num' : ''} ${cmbSort.k === k ? 'on' : ''}" data-k="${k}">${l}${cmbSort.k === k ? (cmbSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
     const top = n => byTotal.slice(0, n).reduce((s, r) => s + r.total, 0);
-    main.innerHTML = cmbToggleHtml(true, pair) + `
+    const profiles = (q.length && rows.length > 0 && rows.length <= 5) ? cmbProfileHtml(rows, Ps, names, short, byTotal) : '';
+    main.innerHTML = cmbToggleHtml(true, pair) + (profiles ? profiles + `<div class="note" style="margin:14px 0 4px">Everything below is for all ${fmtN(byTotal.length)} donors, not just this search.</div>` : '') + `
     <div class="grid kpis">
       <div class="tile"><div class="l">Donors across both committees</div><div class="v">${fmtN(byTotal.length)}</div><div class="d">${fmtN(both)} gave to both</div></div>
       <div class="tile"><div class="l">Combined itemized giving</div><div class="v">${fmt$(grand)}</div><div class="d">${esc(short[0])} ${fmt$(byTotal.reduce((s, r) => s + r.per[0], 0))}, ${esc(short[1])} ${fmt$(byTotal.reduce((s, r) => s + r.per[1], 0))}</div></div>
