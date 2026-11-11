@@ -106,6 +106,8 @@ def host_from(title, code):
     c = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', c)
     return c if 2 <= len(c) <= 40 else ''
 
+import os
+MANUAL = json.load(open('scripts/hosts_manual.json')) if os.path.exists('scripts/hosts_manual.json') else {}
 bycode = mon[mon['channel'] == 'Events'].groupby('Source Code')
 stats = bycode.agg(n=('net', 'size'), amt=('net', 'sum'), donors=('VANID', 'nunique'), firstTime=('first_time', 'sum'),
                    mx=('net', 'max'), firstDay=('day', 'min'), lastDay=('day', 'max'),
@@ -126,6 +128,18 @@ for _, r in ev.iterrows():
                        donors=int(s['donors']) if s is not None else 0, firstTime=int(s['firstTime']) if s is not None else 0,
                        max=round(float(s['mx']), 2) if s is not None else 0, ga=round(float(s['ga']), 3) if s is not None else None,
                        firstDay=int(s['firstDay']) if s is not None else None, lastDay=int(s['lastDay']) if s is not None else None))
+# listed events with no source code: adopt the code-only code dated the same day whose code carries the host's surname or the venue
+for e in events:
+    if e['code'] or not e['date']: continue
+    toks = [t.lower() for t in re.findall(r"[A-Za-z]{3,}", (e['host'] or '') + ' ' + e['name']) if t.lower() not in ('reception', 'with', 'support', 'keisha', 'lance', 'bottoms', 'september', 'october', 'november', 'event', 'fundraiser', 'home', 'the')]
+    for code, s in stats.iterrows():
+        if code in seen or not any(t in code.lower() for t in toks): continue
+        m8 = re.match(r'^(\d{4})(\d{2})(\d{2})', code)
+        if not m8: continue
+        cd = day(dt.datetime(int(m8.group(1)), int(m8.group(2)), int(m8.group(3))))
+        if abs(cd - e['date']) <= 3:
+            e.update(code=code, n=int(s['n']), amt=round(float(s['amt']), 2), donors=int(s['donors']), firstTime=int(s['firstTime']), max=round(float(s['mx']), 2), ga=round(float(s['ga']), 3), firstDay=int(s['firstDay']), lastDay=int(s['lastDay']))
+            seen.add(code); break
 for code, s in stats.iterrows():
     if code in seen: continue
     if code in PROGRAMS:
@@ -145,6 +159,24 @@ for code, s in stats.iterrows():
                        n=int(s['n']), amt=round(float(s['amt']), 2), donors=int(s['donors']), firstTime=int(s['firstTime']),
                        max=round(float(s['mx']), 2), ga=round(float(s['ga']), 3), firstDay=int(s['firstDay']), lastDay=int(s['lastDay'])))
 
+# events that exist only in the Battleground books (their own fundraisers): add them with the Battleground gifts as the room
+if pbmon is not None and len(pbmon):
+    pbev = pbmon[pbmon['Source Code'].map(lambda c: bool(EVENT_RX.match(str(c))) or str(c) in EVENT_CODES)]
+    for code, g in pbev.groupby('Source Code'):
+        if code in seen: continue
+        dte = None
+        try:
+            if re.match(r'^[A-Z]{2,4}\d{6}[A-Za-z]', code): dte = dt.datetime.strptime(re.search(r'\d{6}', code).group(0), '%m%d%y')
+            elif re.match(r'^\d{8}', code): dte = dt.datetime.strptime(code[:8], '%Y%m%d')
+            elif re.match(r'^\d{6}[A-Za-z]', code): dte = dt.datetime.strptime(code[:6], '%m%d%y')
+        except Exception: dte = None
+        events.append(dict(date=day(dte) if dte is not None else int(g['day'].max()), name=code.replace('_', ' ') + ' (Battleground)', location='', type='Battleground event', code=code, host=host_from('', code), listed=False,
+                           invited=0, confirmed=0, completed=0, n=0, amt=0.0, donors=0, firstTime=0, max=0.0, ga=None, firstDay=int(g['day'].min()), lastDay=int(g['day'].max()), pbgOnly=True))
+        seen.add(code)
+for e in events:
+    if e['code'] in MANUAL:
+        e['host'] = MANUAL[e['code']].get('host', e['host']); e['hostNames'] = MANUAL[e['code']].get('hostNames', [])
+        if MANUAL[e['code']].get('name'): e['name'] = MANUAL[e['code']]['name']
 # host candidates: donors whose surname appears in the host string; prefer attendees of that event
 by_last = {}
 for vid, r in agg.iterrows():
@@ -161,6 +193,15 @@ for e in events:
             if vid in att_v or r['total'] >= 1000:
                 cands.append(dict(vanid=int(vid), name=r['name'], gave=round(float(r['total']), 2), atEvent=bool(vid in att_v)))
     cands.sort(key=lambda c: (-c['atEvent'], -c['gave']))
+    if e.get('hostNames'):   # names confirmed by the finance team outrank surname guesses
+        exact = []
+        for hn in e['hostNames']:
+            hit = agg[agg['name'].str.lower() == hn.lower()]
+            for vid, r in hit.iterrows(): exact.append(dict(vanid=int(vid), name=r['name'], gave=round(float(r['total']), 2), atEvent=bool(vid in att_v), confirmed=True))
+            if not len(hit) and pbmon is not None:
+                pr = pb_by_name.get(hn.lower())
+                if pr is not None: exact.append(dict(vanid=0, name=pr['name'], gave=round(float(pr['total']), 2), atEvent=False, confirmed=True, battleground=True))
+        cands = exact + [c for c in cands if c['name'].lower() not in {x['name'].lower() for x in exact}]
     e['hostCandidates'] = cands[:6]
 # ---- Battleground (leadership committee) --------------------------------------------------------
 pbg = None; pb_by_vid = {}; pb_by_name = {}; best_by_name = {}
