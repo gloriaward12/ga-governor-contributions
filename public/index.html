@@ -181,7 +181,7 @@ table.cmb thead tr:first-child th{height:30px;top:0}table.cmb thead tr:nth-child
 .seg.on{color:var(--ink);border-bottom-color:var(--gold);font-weight:600}
 @media print{.rail,.filters,.actions,.chips,.segs,.pager,.brief-h .btn{display:none}.app{grid-template-columns:1fr}.top{padding:0 0 10px;border:0}main{padding:0}.card,.kpis,.brief{break-inside:avoid;border-color:#ccc}.tw{max-height:none;overflow:visible}body{background:#fff}}
 </style>
-<link rel="stylesheet" href="/theme.css?v=2">
+<link rel="stylesheet" href="/theme.css?v=3">
 </head>
 <body>
 <div class="app">
@@ -763,6 +763,6 @@ loadField().catch(e=>{$('#main').innerHTML=`<div class="loading">Could not load 
 window.addEventListener('resize',()=>{clearTimeout(window.__rz);window.__rz=setTimeout(()=>{if(D&&(tab==='overview'||tab==='field'))render();},200);});
 </script>
 <script>const BASE={renderOverview,renderGeo,renderWork,renderField,load};</script>
-<script src="app2.js"></script>
+<script src="app2.js?v=3"></script>
 </body>
 </html>
