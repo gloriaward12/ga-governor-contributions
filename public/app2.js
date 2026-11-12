@@ -122,7 +122,7 @@ function donorBrief(brief) {
   const q = (state.q || '').toLowerCase().split(/\s+/).filter(Boolean); if (!q.length) return;
   const pair = xcPair(); if (pair.length !== 2) return; const seq = ++briefSeq;
   Promise.all(pair.map(xcData)).then(Ps => {
-    if (seq !== briefSeq || tab !== 'overview') return;
+    if (seq !== briefSeq || tab !== 'overview' || !brief.isConnected) return;
     const short = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).short || String(id));
     const maps = Ps.map(cmbRecordsOf); const all = new Map();
     maps.forEach((m, ci) => { for (const [k, o] of m) { let r = all.get(k); if (!r) { r = { k, name: o.name, city: o.city, state: o.state, emp: o.emp, occ: o.occ, per: [0, 0], n: [0, 0], total: 0, gifts: 0, first: 1e9, last: -1 }; all.set(k, r); } r.per[ci] += o.total; r.n[ci] += o.n; r.total += o.total; r.gifts += o.n; if (o.last > r.last) r.last = o.last; if (o.first < r.first) r.first = o.first; if (!r.emp && o.emp) { r.emp = o.emp; r.occ = o.occ; } } });
@@ -558,7 +558,7 @@ function renderCrossSearch(main) {
       <div class="tw" style="max-height:360px"><table><thead><tr><th>Donor</th><th>Location</th>${names.map((n, i) => `<th class="num">${esc(n)}${CUR && CUR.id === pair[i] ? ' <span class="pill">viewing</span>' : ''}</th>`).join('')}<th class="num">Combined</th></tr></thead><tbody>
       ${rows.slice(0, 25).map(r => `<tr class="row"><td><b>${esc(r.o.name)}</b>${r.o.emp ? `<div class="small muted">${esc(r.o.emp)}</div>` : ''}</td><td>${esc(r.o.city)}${r.o.state ? ', ' + r.o.state : ''}</td>${r.per.map((x, i) => x ? `<td class="num"><a href="#" class="xc-go" data-id="${pair[i]}" data-q="${esc(r.o.name)}"><b>${fmt$(x.total)}</b></a><div class="small muted">${fmtN(x.n)} gift${x.n === 1 ? '' : 's'}, last ${dayStr(x.last)}</div></td>` : `<td class="num muted">—</td>`).join('')}<td class="num"><b>${fmt$(r.combined)}</b></td></tr>`).join('')}
       </tbody></table></div>${rows.length > 25 ? `<div class="small muted" style="margin-top:6px">Showing 25 of ${fmtN(rows.length)}; refine the search to narrow it.</div>` : ''}`;
-    box.querySelectorAll('.xc-go').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const id = +a.dataset.id; const nm = a.dataset.q; $('#q').value = nm; state.q = nm.toLowerCase(); if (CUR && CUR.id === id) { apply(); return; } if (tab === 'pbg') { tab = 'donors'; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } loadCandidate(id); }));
+    box.querySelectorAll('.xc-go').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const id = +a.dataset.id; const nm = a.dataset.q; if (CUR && CUR.id === id) { $('#q').value = nm; state.q = nm.toLowerCase(); apply(); return; } goWithSearch(id, nm, (tab === 'pbg' || tab === 'overview') ? 'donors' : null); }));
   }).catch(e => { if (box.isConnected) box.innerHTML = `<h3>Across the campaign and Project Battleground</h3><div class="note">Could not load the other committee: ${esc(e.message)}</div>`; });
 }
 
@@ -610,10 +610,10 @@ function cmbToggleHtml(on, pair) {
 }
 function bindCmbToggle(main) { main.querySelectorAll('[data-cmb]').forEach(b => b.addEventListener('click', () => { COMBINED = b.dataset.cmb === '1'; cmbPage = 0; render(); })); }
 function renderDonorsCombined(main) {
-  const pair = cmbPairFor(CUR.id); const seq = ++cmbSeq;
+  const pair = cmbPairFor(CUR.id); const seq = ++cmbSeq; const cid = CUR.id;
   main.innerHTML = cmbToggleHtml(true, pair) + '<div class="loading">Combining both committees…</div>'; bindCmbToggle(main);
   Promise.all(pair.map(xcData)).then(Ps => {
-    if (seq !== cmbSeq || tab !== 'donors' || !COMBINED) return;
+    if (seq !== cmbSeq || tab !== 'donors' || !COMBINED || !CUR || CUR.id !== cid || !main.isConnected || main.querySelector('#pbar')) return;   // a committee switch started meanwhile: leave its loading screen alone
     const names = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).committee || String(id)); const short = pair.map(id => (FIELD.candidates.find(c => c.id === id) || {}).short || String(id));
     const maps = Ps.map(cmbRecordsOf); const q = (state.q || '').toLowerCase().split(/\s+/).filter(Boolean);
     const all = new Map();
@@ -680,6 +680,9 @@ function extendSearch() {
   for (let i = 0; i < N; i++) D.search[i] += '|' + (co[det.county[i]] + '|' + me[det.metro[i]] + '|' + se[det.sector[i]]).toLowerCase();
 }
 let PENDING_Q = new URLSearchParams(location.search).get('q') || '';   // a search handed in by link (e.g. from the finance pages)
+// Switch committee keeping a search: the base loader clears filters, so the name is parked and re-applied once the data is in.
+function goWithSearch(id, nm, toTab) { PENDING_Q = nm; if (toTab) { tab = toTab; [...$('#tabs').children].forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab)); } loadCandidate(id); watchPendingQ(); }
+function watchPendingQ() { if (watchPendingQ._t) clearInterval(watchPendingQ._t); const t = watchPendingQ._t = setInterval(() => { if (!PENDING_Q) { clearInterval(t); return; } if (typeof D !== 'undefined' && D && D.det && !document.querySelector('#main .loading')) { clearInterval(t); if (!D._ext) extendSearch(); applyPendingQ(); } }, 150); setTimeout(() => clearInterval(t), 120000); }
 function applyPendingQ() { if (!PENDING_Q) return false; const qi = $('#q'); if (qi) qi.value = PENDING_Q; state.q = PENDING_Q.toLowerCase(); PENDING_Q = ''; apply(); return true; }
 async function load(id) {
   await BASE.load(id);          // note: the base loader clears the search box and filter state
@@ -692,4 +695,4 @@ async function load(id) {
 // if the base page already finished loading before this script arrived (cached data), re-render with the extended views
 if (typeof D !== 'undefined' && D && D.det && !document.querySelector('#main .loading')) { extendSearch(); if (!applyPendingQ()) render(); }
 // the base page usually starts its first load before this script runs, so the handed-in search is applied once that load has finished and reset the filters
-if (PENDING_Q) { const t = setInterval(() => { if (typeof D !== 'undefined' && D && D.det && !document.querySelector('#main .loading')) { clearInterval(t); if (!D._ext) extendSearch(); applyPendingQ(); } }, 150); setTimeout(() => clearInterval(t), 120000); }
+if (PENDING_Q) watchPendingQ();

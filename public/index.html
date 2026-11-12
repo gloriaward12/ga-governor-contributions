@@ -279,9 +279,9 @@ async function load(id){
   const r=await fetch(`data/cand-${id}.json?v=${encodeURIComponent((FIELD&&FIELD.generated)||'')}`);
   const total=+r.headers.get('content-length')||8300000;
   const reader=r.body.getReader();const chunks=[];let got=0;
-  while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);got+=value.length;$('#pbar').style.width=Math.min(100,100*got/total)+'%';}
+  while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);got+=value.length;{const pb=$('#pbar');if(pb)pb.style.width=Math.min(100,100*got/total)+'%';}}
   const text=await new Blob(chunks).text();
-  $('#ptext').textContent='Indexing…';
+  {const pt=$('#ptext');if(pt)pt.textContent='Indexing…';}
   D=JSON.parse(text);DICT=D.dict;EPOCH=new Date(D.meta.epoch+'T00:00:00Z');
   N=D.det.tid.length;UN=D.unit.day.length;
   // typed arrays for speed
