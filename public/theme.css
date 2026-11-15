@@ -95,3 +95,11 @@ button[type=submit]:hover{background:var(--blue-2)}
 @media (max-width:640px){.tabs button[aria-selected="true"]{background:var(--blue-wash);border-bottom-color:transparent}}
 .tabs button[data-tab="field"]{border-top:1px solid var(--rule);border-radius:0 0 10px 10px;margin-top:14px;padding-top:12px}
 .tabs button[data-tab="field"][aria-selected="true"]{border-radius:10px;border-top-color:transparent}
+
+/* finance actions */
+.btn.xs{padding:3px 8px;font-size:11.5px}.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;padding:10px 14px 14px}.dg b{font-size:22px;display:block}
+.nowrap{white-space:nowrap}
+tr.late td:first-child{box-shadow:inset 3px 0 0 var(--crit)}
+.kan{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:12px}.kcol{background:var(--rail-2,#f6f7f9);border-radius:10px;padding:8px;min-height:120px}.kh{font-size:12px;font-weight:600;padding:4px 6px 8px;display:flex;justify-content:space-between}.kcard{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:13px}.kcard .mv{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+@media(max-width:1000px){.kan{grid-template-columns:1fr 1fr}}
+table.cmp th.home{background:var(--blue-wash)}table.cmp td.up{color:var(--good)}table.cmp td.dn{color:var(--crit)}table.cmp td.num svg{display:block;margin-left:auto}

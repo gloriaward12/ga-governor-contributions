@@ -40,3 +40,11 @@ To add or remove committees, edit `IDS` in `scripts/fetch_bulk.mjs`, `FILERS` in
 * Totals reconcile to the Commission's candidate registry ("Total Contributions") for every committee as of the extract date.
 
 Source: https://peachfile.ethics.ga.gov (public campaign finance data).
+
+
+## Finance: donor actions, compare the field (Nov 2026)
+- **Ask lists** (`/finance`): headroom, over-limit, watched and my-actions segments; row actions (call sheet, assign, watch, note); multi-select → call-sheet builder (owner, due, ask override; CSV + printable one-pager with blank phone/email columns — contact details are never stored on the site); saved views (shared or private); weekly digest (new high-headroom gifts, newly lapsed, watched donors who gave, over-limit flags, actions due).
+- **Actions** (`/finance/actions`): my / team / unassigned, overdue and due-this-week filters, list or kanban, one-click status with a note, per-action history, CSV.
+- **Compare the field** (`/finance/compare`): 2–6 committees from `field.json` on gross/net/ex-self-funding, last 90 days, donors, average and median gift, small-dollar and large-gift shares, in-state share, spend, burn, cash on hand, runway; index-to-campaign toggle; saved sets; CSV; printable comparison snapshot with a narrative.
+- **Overview**: "Print leadership snapshot" (briefing, momentum, cash and runway, top 3 flags, top 10 by headroom, one page). **Spending**: runway scenarios (burn multiplier, add raised, monthly raised going forward).
+- Working records (`gp.actions`, `gp.watch`, `gp.segments`, `gp.users`) live in the browser and mirror to a private Vercel Blob store through `api/private/store.js` (behind the finance session) once a store is connected to the project; the "Working as" name travels with every change into `audit/finance.json`.

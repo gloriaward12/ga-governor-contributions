@@ -6,7 +6,8 @@
   "type": "module",
   "dependencies": {
     "topojson-client": "^3.1.0",
-    "us-atlas": "^3.0.1"
+    "us-atlas": "^3.0.1",
+    "@vercel/blob": "^2.9.0"
   },
   "scripts": {
     "fetch": "node scripts/fetch_bulk.mjs data-raw",
