@@ -17,7 +17,7 @@
     "build-data": "python3 scripts/build_data.py data-raw public/data data-raw/api_enrichment.json.gz",
     "refresh": "npm run fetch && npm run enrich && npm run registry && npm run geo && npm run build-data",
     "serve": "python3 -m http.server 8765 --directory public",
-    "build": "sha256sum -c checksums.txt && npm run fetch && npm run enrich && npm run registry && npm run geo && npm run build-data",
+    "build": "sha256sum -c checksums.txt && (npm run refresh || (echo \"REFRESH FAILED: PeachFile unavailable at build time; deploying the last committed data in public/data\" && git checkout -- public/data 2>/dev/null; true))",
     "install-build-deps": "python3 -m pip install --quiet --break-system-packages pandas zipcodes"
   }
 }

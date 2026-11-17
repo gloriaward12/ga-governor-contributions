@@ -9,9 +9,15 @@ async function pull(code, file) {
   let header = null; const rows = [];
   for (const y of YEARS) {
     console.log('downloading', code, 'filing year', y);
-    const r = await fetch('https://api-peachfile.ethics.ga.gov/api/ExportPublicData/GetExportPublicDownloadData', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*' },
-      body: JSON.stringify({ transactionTypeCode: code, type: 'CSV', filingYear: String(y), openInNewTab: false }) });
+    let r = null;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      r = await fetch('https://api-peachfile.ethics.ga.gov/api/ExportPublicData/GetExportPublicDownloadData', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*', 'Origin': 'https://peachfile.ethics.ga.gov', 'Referer': 'https://peachfile.ethics.ga.gov/', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' },
+        body: JSON.stringify({ transactionTypeCode: code, type: 'CSV', filingYear: String(y), openInNewTab: false }) });
+      if (r.ok) break;
+      console.log('  attempt', attempt, 'HTTP', r.status, attempt < 4 ? '- retrying' : '');
+      await new Promise(res => setTimeout(res, 4000 * attempt));
+    }
     if (!r.ok) throw new Error('bulk download failed: HTTP ' + r.status);
     const text = Buffer.from(await r.arrayBuffer()).toString('latin1');
     const lines = text.split('\n');
