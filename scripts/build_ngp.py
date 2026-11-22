@@ -463,3 +463,14 @@ out = dict(attributions=attributions, generated=dt.datetime.now(dt.timezone.utc)
            tiers=tiers, channels=channels, codes=codes, months=months, events=events, hosts=hosts, recon=recon, pbg=pbg, pbgFiled=bool(pbg_filed), list=donors)
 json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
 print('events', len(events), 'hosts', len(hosts), 'donors listed', len(donors), 'bytes', len(open(OUT).read()))
+
+# Small summary for the Battleground banner shown at the top of the finance pages (no donor rows).
+if pbg:
+    filed_meta = json.load(open(PBG_FILED))['meta'] if PBG_FILED else {}
+    inaug = [c for c in pbg['codes'] if 'inaug' in str(c.get('code', '')).lower() or 'inaug' in str(c.get('desc', '')).lower()]
+    summ = dict(generated=out['generated'], asof=pbg['asof'], total=pbg['total'], donors=pbg['donors'], rows=pbg['rows'], inkind=pbg.get('inkind', 0),
+                months=pbg['months'], tiers=pbg['tiers'],
+                inaug=dict(codes=[c['code'] for c in inaug], amt=round(sum(c['amt'] for c in inaug), 2), n=int(sum(c['n'] for c in inaug)), donors=int(sum(c['donors'] for c in inaug))),
+                filed=dict(net=filed_meta.get('net'), gross=filed_meta.get('gross'), spent=filed_meta.get('spent'), lastDay=filed_meta.get('lastDay'), lastSpendDay=filed_meta.get('lastSpendDay'), donors=filed_meta.get('donors'), extractedAsOf=filed_meta.get('extractedAsOf')))
+    json.dump(summ, open('public/finance/pbg.json', 'w'), separators=(',', ':'), default=str)
+    print('pbg.json written', summ['inaug'])
