@@ -474,3 +474,37 @@ if pbg:
                 filed=dict(net=filed_meta.get('net'), gross=filed_meta.get('gross'), spent=filed_meta.get('spent'), lastDay=filed_meta.get('lastDay'), lastSpendDay=filed_meta.get('lastSpendDay'), donors=filed_meta.get('donors'), extractedAsOf=filed_meta.get('extractedAsOf')))
     json.dump(summ, open('public/finance/pbg.json', 'w'), separators=(',', ':'), default=str)
     print('pbg.json written', summ['inaug'])
+
+# ---- Inaugural: every gift, ticket purchaser and guest tied to an inauguration code or event, both committees ----
+def _inaug_mask(s): return s.fillna('').astype(str).str.contains('inaug', case=False)
+ig = []
+for src, frame in (('Project Battleground Georgia', pb), ('Keisha for Governor', d)):
+    if frame is None: continue
+    sub = frame[_inaug_mask(frame['Source Code'])]
+    for _, r in sub.iterrows():
+        ig.append(dict(name=str(r['Contact Name']).strip(), vanid=str(r.get('VANID', '')), committee=src, amt=round(float(r['net']), 2), gross=round(float(r['Amount']), 2),
+                       day=int(r['day']) if pd.notna(r['day']) else None, code=str(r['Source Code']), method=str(r.get('Payment Method', '') or ''),
+                       kind=str(r.get('Contribution Type', '') or ''), city=str(r.get('Home City', '') or ''), state=str(r.get('Home State/Province', '') or ''),
+                       emp=str(r.get('Employer', '') or ''), occ=str(r.get('Occupation', '') or '')))
+ievents = []
+isign = []
+if PART is not None:
+    ps = PART[_inaug_mask(PART['Event Name'])]
+    for nm, g in ps.groupby('Event Name'):
+        ievents.append(dict(name=str(nm), date=day(g['Event Date'].max()) if pd.notna(g['Event Date'].max()) else None, signups=int(len(g)),
+                            purchasers=int((g['Role'].fillna('') == 'Ticket Purchaser').sum())))
+    for _, r in ps.iterrows():
+        isign.append(dict(name=str(r['Contact Name']).strip(), vanid=str(r.get('VANID', '')), event=str(r['Event Name']), role=str(r.get('Role', '') or ''),
+                          status=str(r.get('Status', '') or ''), signup=day(pd.to_datetime(r['Signup Date'], errors='coerce'))))
+itix = []
+if GUESTS is not None:
+    gs = GUESTS[_inaug_mask(GUESTS['Event Name'])]
+    for _, r in gs.iterrows():
+        itix.append(dict(buyer=str(r['Contact Name']).strip(), guest=str(r.get('Guest Full Name', '') or ''), level=str(r.get('Ticket Level', '') or ''),
+                         price=round(float(r['p']), 2), event=str(r['Event Name']), purchased=day(pd.to_datetime(r['Date Purchased'], errors='coerce'))))
+inaug = dict(generated=out['generated'], asofBooks=int(pbmon['day'].max()) if pbmon is not None else int(mon['day'].max()), asofCampaign=int(mon['day'].max()),
+             total=round(sum(g['amt'] for g in ig), 2), gifts=len(ig), buyers=len({(g['vanid'] or g['name'].lower()) for g in ig}),
+             codes=sorted({g['code'] for g in ig}), events=ievents, giftList=sorted(ig, key=lambda g: -(g['amt'])), signups=isign, tickets=itix,
+             guestsReportAsOf=(day(GUESTS['Date Purchased'].map(lambda x: pd.to_datetime(x, errors='coerce')).max()) if GUESTS is not None and len(GUESTS) else None))
+json.dump(inaug, open('public/finance/inaugural.json', 'w'), separators=(',', ':'), default=str)
+print('inaugural.json', inaug['gifts'], 'gifts', inaug['total'], len(isign), 'signups', len(itix), 'tickets')

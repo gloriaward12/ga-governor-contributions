@@ -19,6 +19,7 @@
   .pbgb .t .d{font-size:12px;color:#AEB7C4}
   .pbgb .t.hot .v{color:#D4A64A}
   .pbgb .t.hot{border-left:2px solid #D4A64A;padding-left:12px}
+  .pbgb a.tl{text-decoration:none;display:block;border-radius:4px;padding:6px 10px 6px 12px;margin:-6px 0;transition:background .15s}.pbgb a.tl:hover{background:rgba(212,166,74,.14)}.pbgb a.tl .k{color:#D4A64A;font-weight:600}
   .pbgb a{color:#fff;text-decoration:underline;text-decoration-color:#D4A64A;text-underline-offset:3px}
   .pbgb .foot{grid-column:1/-1;font-size:12px;color:#AEB7C4;display:flex;gap:16px;flex-wrap:wrap;margin-top:2px}
   @media (max-width:900px){.pbgb .in{grid-template-columns:1fr 1fr}.pbgb .lead{grid-column:1/-1}.pbgb .lead .v{font-size:36px}}`;
@@ -32,7 +33,7 @@
     const onRaised = location.pathname.startsWith('/finance/raised');
     el.innerHTML = `<div class="pbgb"><div class="in">
       <div class="lead"><div class="k">Project Battleground Georgia · the committee's books</div><div class="v">${fmtM(P.total)}</div><div class="d">net of refunds, ${fmtN(P.rows)} gifts from ${fmtN(P.donors)} donors, NGP through <b style="color:#fff">${dayStr(P.asof)}</b></div></div>
-      <div class="t hot"><div class="k">Inauguration pages</div><div class="v">${P.inaug.n ? fmt$(P.inaug.amt) : '—'}</div><div class="d">${P.inaug.n ? `${fmtN(P.inaug.n)} gift${P.inaug.n === 1 ? '' : 's'} · ${P.inaug.codes.map(esc).join(', ')}` : 'no gifts coded to an inauguration page yet'}</div></div>
+      <a class="t hot tl" href="/finance/inaugural" title="Who has purchased, and for how much"><div class="k">The inaugural · who purchased →</div><div class="v">${P.inaug.n ? fmt$(P.inaug.amt) : '—'}</div><div class="d">${P.inaug.n ? `${fmtN(P.inaug.donors)} purchaser${P.inaug.donors === 1 ? '' : 's'} · ${fmtN(P.inaug.n)} gift${P.inaug.n === 1 ? '' : 's'} · click for the list` : 'no purchases coded yet · click for the page'}</div></a>
       <div class="t"><div class="k">${esc(curLabel)} so far</div><div class="v">${fmt$(cur.amt)}</div><div class="d">${fmtN(cur.n)} gifts · ${fmtN(cur.donors)} donors · ${fmtM(prev.amt)} last month</div></div>
       <div class="t"><div class="k">$50,000 and up</div><div class="v">${fmtN(big.donors)}</div><div class="d">donors · ${fmtM(big.amt)} · ${Math.round(big.amt / P.total * 100)}% of the total</div></div>
       <div class="t"><div class="k">Filed with the Commission</div><div class="v">${F.net ? fmtM(F.net) : '—'}</div><div class="d">${F.net ? `net, through ${dayStr(F.lastDay)} · ${F.spent ? fmtM(F.spent) + ' spent' : ''}` : 'no filing loaded'}</div></div>
