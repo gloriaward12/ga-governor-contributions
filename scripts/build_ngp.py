@@ -475,36 +475,76 @@ if pbg:
     json.dump(summ, open('public/finance/pbg.json', 'w'), separators=(',', ':'), default=str)
     print('pbg.json written', summ['inaug'])
 
-# ---- Inaugural: every gift, ticket purchaser and guest tied to an inauguration code or event, both committees ----
+# ---- Inaugural: every gift, ticket purchaser and guest tied to the inaugural code family or an inaugural event, both committees ----
+# The family is defined by the Source Codes report: any code whose ancestor chain reaches a code containing "inaug" (e.g. Inaug2027),
+# plus any code or event name that itself contains "inaug".
+PARENT = {}
+if PBG_CODES:
+    for _, r in _c.iterrows():
+        PARENT[str(r['Name']).strip()] = str(r.get('Parent Name', '') or '').strip() if isinstance(r.get('Parent Name', ''), str) else ''
+def _is_inaug_code(code):
+    seen = set(); c = str(code or '').strip()
+    while c and c not in seen:
+        if 'inaug' in c.lower(): return True
+        seen.add(c); c = PARENT.get(c, '')
+    return False
+INAUG_CODES = {c for c in PARENT if _is_inaug_code(c)}
+TIER_WORDS = ['Presenting', 'Premier', 'Patron', 'Leadership', 'Standard', 'Supporting', 'Supporter', 'CommunityChamp', 'Community', 'Friend', 'Neighbor']
+def _code_meta(code):
+    c = str(code or ''); parent = PARENT.get(c, '')
+    tier = next((t for t in TIER_WORDS if t.lower() in c.lower()), '')
+    base = re.sub(r'(Package)?(2027)?$', '', c)
+    host = ''
+    if tier and not c.lower().startswith(tier.lower()) and 'package' not in c.lower():
+        host = re.sub(r'(?i)' + tier, '', base).strip()
+        host = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', host)
+    if not host and re.search(r'(?i)inaug2027$', c) and c.lower() not in ('inaug2027',):
+        host = re.sub(r'(?i)inaug2027$', '', c); host = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', host).strip()
+    kind = 'event' if re.search(r'(?i)gala|swearing|reception|party', c) else 'host page' if host else 'package' if 'package' in c.lower() else 'general' if re.search(r'(?i)general|inaug', c) else 'other'
+    return dict(parent=parent, tier=tier, host=host, kind=kind)
+def _inaug_mask_codes(s): return s.fillna('').astype(str).map(lambda c: c.strip() in INAUG_CODES or 'inaug' in c.lower())
 def _inaug_mask(s): return s.fillna('').astype(str).str.contains('inaug', case=False)
 ig = []
 for src, frame in (('Project Battleground Georgia', pb), ('Keisha for Governor', d)):
     if frame is None: continue
-    sub = frame[_inaug_mask(frame['Source Code'])]
+    sub = frame[_inaug_mask_codes(frame['Source Code'])]
     for _, r in sub.iterrows():
+        meta = _code_meta(r['Source Code'])
         ig.append(dict(name=str(r['Contact Name']).strip(), vanid=str(r.get('VANID', '')), committee=src, amt=round(float(r['net']), 2), gross=round(float(r['Amount']), 2),
                        day=int(r['day']) if pd.notna(r['day']) else None, code=str(r['Source Code']), method=str(r.get('Payment Method', '') or ''),
-                       kind=str(r.get('Contribution Type', '') or ''), city=str(r.get('Home City', '') or ''), state=str(r.get('Home State/Province', '') or ''),
-                       emp=str(r.get('Employer', '') or ''), occ=str(r.get('Occupation', '') or '')))
-ievents = []
-isign = []
+                       ctype=str(r.get('Contribution Type', '') or ''), city=str(r.get('Home City', '') or ''), state=str(r.get('Home State/Province', '') or ''),
+                       emp=str(r.get('Employer', '') or ''), occ=str(r.get('Occupation', '') or ''), **meta))
+ievents = []; isign = []
 if PART is not None:
     ps = PART[_inaug_mask(PART['Event Name'])]
     for nm, g in ps.groupby('Event Name'):
-        ievents.append(dict(name=str(nm), date=day(g['Event Date'].max()) if pd.notna(g['Event Date'].max()) else None, signups=int(len(g)),
-                            purchasers=int((g['Role'].fillna('') == 'Ticket Purchaser').sum())))
+        ievents.append(dict(name=str(nm), date=day(g['Event Date'].max()) if pd.notna(g['Event Date'].max()) else None, signups=int(len(g)), purchasers=int((g['Role'].fillna('') == 'Ticket Purchaser').sum())))
     for _, r in ps.iterrows():
-        isign.append(dict(name=str(r['Contact Name']).strip(), vanid=str(r.get('VANID', '')), event=str(r['Event Name']), role=str(r.get('Role', '') or ''),
-                          status=str(r.get('Status', '') or ''), signup=day(pd.to_datetime(r['Signup Date'], errors='coerce'))))
+        isign.append(dict(name=str(r['Contact Name']).strip(), vanid=str(r.get('VANID', '')), event=str(r['Event Name']), role=str(r.get('Role', '') or ''), status=str(r.get('Status', '') or ''), signup=day(pd.to_datetime(r['Signup Date'], errors='coerce'))))
 itix = []
 if GUESTS is not None:
     gs = GUESTS[_inaug_mask(GUESTS['Event Name'])]
     for _, r in gs.iterrows():
-        itix.append(dict(buyer=str(r['Contact Name']).strip(), guest=str(r.get('Guest Full Name', '') or ''), level=str(r.get('Ticket Level', '') or ''),
-                         price=round(float(r['p']), 2), event=str(r['Event Name']), purchased=day(pd.to_datetime(r['Date Purchased'], errors='coerce'))))
+        itix.append(dict(buyer=str(r['Contact Name']).strip(), guest=str(r.get('Guest Full Name', '') or '') if isinstance(r.get('Guest Full Name', ''), str) else '', level=str(r.get('Ticket Level', '') or ''), price=round(float(r['p']), 2), event=str(r['Event Name']), purchased=day(pd.to_datetime(r['Date Purchased'], errors='coerce'))))
+code_rows = []
+for c in sorted(INAUG_CODES):
+    meta = _code_meta(c); gifts = [g for g in ig if g['code'] == c]
+    created = ''
+    try: created = str(_c.loc[_c['Name'].astype(str).str.strip() == c, 'Date Created'].iloc[0])[:10]
+    except Exception: pass
+    code_rows.append(dict(code=c, created=created, n=len(gifts), amt=round(sum(g['amt'] for g in gifts), 2), donors=len({g['vanid'] or g['name'] for g in gifts}), **meta))
 inaug = dict(generated=out['generated'], asofBooks=int(pbmon['day'].max()) if pbmon is not None else int(mon['day'].max()), asofCampaign=int(mon['day'].max()),
              total=round(sum(g['amt'] for g in ig), 2), gifts=len(ig), buyers=len({(g['vanid'] or g['name'].lower()) for g in ig}),
-             codes=sorted({g['code'] for g in ig}), events=ievents, giftList=sorted(ig, key=lambda g: -(g['amt'])), signups=isign, tickets=itix,
+             codes=sorted({g['code'] for g in ig}), codeFamily=code_rows, events=ievents, giftList=sorted(ig, key=lambda g: -(g['amt'])), signups=isign, tickets=itix,
              guestsReportAsOf=(day(GUESTS['Date Purchased'].map(lambda x: pd.to_datetime(x, errors='coerce')).max()) if GUESTS is not None and len(GUESTS) else None))
 json.dump(inaug, open('public/finance/inaugural.json', 'w'), separators=(',', ':'), default=str)
-print('inaugural.json', inaug['gifts'], 'gifts', inaug['total'], len(isign), 'signups', len(itix), 'tickets')
+print('inaugural.json', inaug['gifts'], 'gifts', inaug['total'], len(isign), 'signups', len(itix), 'tickets', len(code_rows), 'codes in family')
+nextEv = min([e for e in ievents if e.get('date') is not None], key=lambda e: e['date'], default=None)
+inaug_summary = dict(total=inaug['total'], gifts=inaug['gifts'], buyers=inaug['buyers'], codes=len(code_rows), codesSelling=sum(1 for c in code_rows if c['n']), hostPages=sum(1 for c in code_rows if c['kind'] == 'host page'),
+                     tickets=len(itix), nextEvent=nextEv, asof=inaug['asofBooks'])
+try:
+    _p = json.load(open('public/finance/pbg.json')); _p['inaug'] = dict(codes=sorted({g['code'] for g in ig}), amt=inaug['total'], n=inaug['gifts'], donors=inaug['buyers'], family=len(code_rows)); json.dump(_p, open('public/finance/pbg.json', 'w'), separators=(',', ':'), default=str)
+except Exception as e: print('pbg.json inaug refresh skipped', e)
+out['inaug'] = inaug_summary
+json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
+print('inaug summary', inaug_summary)
