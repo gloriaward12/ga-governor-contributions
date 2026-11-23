@@ -489,6 +489,12 @@ def _is_inaug_code(code):
         seen.add(c); c = PARENT.get(c, '')
     return False
 INAUG_CODES = {c for c in PARENT if _is_inaug_code(c)}
+# Codes created after the last Source Codes export: a host-page or package code follows the <Host><Tier>2027 pattern
+_TIER_RE = re.compile(r'(?i)(Presenting|Premier|Patron|Leadership|Standard|Supporting|Supporter|CommunityChamp|Community|Friend|Neighbor|Package)2027$')
+for _f in (pb, d):
+    if _f is None: continue
+    for c in _f['Source Code'].dropna().astype(str).str.strip().unique():
+        if c and c not in INAUG_CODES and _TIER_RE.search(c): INAUG_CODES.add(c); PARENT.setdefault(c, 'Inaug2027 (inferred)')
 TIER_WORDS = ['Presenting', 'Premier', 'Patron', 'Leadership', 'Standard', 'Supporting', 'Supporter', 'CommunityChamp', 'Community', 'Friend', 'Neighbor']
 def _code_meta(code):
     c = str(code or ''); parent = PARENT.get(c, '')
