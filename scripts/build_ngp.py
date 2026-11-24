@@ -504,12 +504,18 @@ def _code_meta(code):
     if tier and not c.lower().startswith(tier.lower()) and 'package' not in c.lower():
         host = re.sub(r'(?i)' + tier, '', base).strip()
         host = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', host)
+    if not host and not tier and re.search(r'2027$', c) and not re.search(r'(?i)package|gala|swearing|reception|party|general|^inaug', c):
+        host = re.sub(r'(?i)inaug2027$|2027$', '', c); host = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', host).strip()
     if not host and re.search(r'(?i)inaug2027$', c) and c.lower() not in ('inaug2027',):
         host = re.sub(r'(?i)inaug2027$', '', c); host = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', host).strip()
     kind = 'event' if re.search(r'(?i)gala|swearing|reception|party', c) else 'host page' if host else 'package' if 'package' in c.lower() else 'general' if re.search(r'(?i)general|inaug', c) else 'other'
     return dict(parent=parent, tier=tier, host=host, kind=kind)
 def _inaug_mask_codes(s): return s.fillna('').astype(str).map(lambda c: c.strip() in INAUG_CODES or 'inaug' in c.lower())
 def _inaug_mask(s): return s.fillna('').astype(str).str.contains('inaug', case=False)
+def _inaug_event_mask(frame):
+    nm = frame['Event Name'].fillna('').astype(str)
+    dt_ = pd.to_datetime(frame['Event Date'], errors='coerce')
+    return nm.str.contains('inaug', case=False) | nm.str.contains(r'(?i)pack(age)?\s*2027|sponsorship package|gala 2027|swearing') | (dt_ >= pd.Timestamp('2027-01-01'))
 ig = []
 for src, frame in (('Project Battleground Georgia', pb), ('Keisha for Governor', d)):
     if frame is None: continue
@@ -522,14 +528,14 @@ for src, frame in (('Project Battleground Georgia', pb), ('Keisha for Governor',
                        emp=str(r.get('Employer', '') or ''), occ=str(r.get('Occupation', '') or ''), **meta))
 ievents = []; isign = []
 if PART is not None:
-    ps = PART[_inaug_mask(PART['Event Name'])]
+    ps = PART[_inaug_event_mask(PART)]
     for nm, g in ps.groupby('Event Name'):
         ievents.append(dict(name=str(nm), date=day(g['Event Date'].max()) if pd.notna(g['Event Date'].max()) else None, signups=int(len(g)), purchasers=int((g['Role'].fillna('') == 'Ticket Purchaser').sum())))
     for _, r in ps.iterrows():
         isign.append(dict(name=str(r['Contact Name']).strip(), vanid=str(r.get('VANID', '')), event=str(r['Event Name']), role=str(r.get('Role', '') or ''), status=str(r.get('Status', '') or ''), signup=day(pd.to_datetime(r['Signup Date'], errors='coerce'))))
 itix = []
 if GUESTS is not None:
-    gs = GUESTS[_inaug_mask(GUESTS['Event Name'])]
+    gs = GUESTS[_inaug_event_mask(GUESTS)]
     for _, r in gs.iterrows():
         itix.append(dict(buyer=str(r['Contact Name']).strip(), guest=str(r.get('Guest Full Name', '') or '') if isinstance(r.get('Guest Full Name', ''), str) else '', level=str(r.get('Ticket Level', '') or ''), price=round(float(r['p']), 2), event=str(r['Event Name']), purchased=day(pd.to_datetime(r['Date Purchased'], errors='coerce'))))
 code_rows = []
