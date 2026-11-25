@@ -20,6 +20,8 @@ PBG_PART = None
 if '--pbg-participants' in args: i = args.index('--pbg-participants'); PBG_PART = args[i + 1]; del args[i:i + 2]
 PBG_GUESTS = None
 if '--pbg-guests' in args: i = args.index('--pbg-guests'); PBG_GUESTS = args[i + 1]; del args[i:i + 2]
+DISB = None
+if '--disb' in args: i = args.index('--disb'); DISB = args[i + 1]; del args[i:i + 2]
 PBG_ATTR = None
 if '--pbg-attributions' in args: i = args.index('--pbg-attributions'); PBG_ATTR = args[i + 1]; del args[i:i + 2]
 GUESTS = pd.read_pickle(PBG_GUESTS) if PBG_GUESTS else None
@@ -560,3 +562,21 @@ except Exception as e: print('pbg.json inaug refresh skipped', e)
 out['inaug'] = inaug_summary
 json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
 print('inaug summary', inaug_summary)
+
+# ---- Keisha for Governor spending, from the NGP Disbursement report (books side; vendor level, no donor names) ----
+if DISB:
+    sd = pd.read_pickle(DISB) if DISB.endswith('.pkl') else pd.read_csv(DISB, sep='\t', encoding='utf-16', dtype=str)
+    sd = sd[sd['Date Issued'].astype(str).str.match(r'\d{4}-\d{2}-\d{2}', na=False)].copy()
+    sd['amt'] = pd.to_numeric(sd['Amount'], errors='coerce').fillna(0); sd['dt'] = pd.to_datetime(sd['Date Issued'], errors='coerce'); sd['m'] = sd['dt'].dt.strftime('%Y-%m')
+    ops = sd[sd['Disbursement Type'] == 'Operating Expenditure']; ref = sd[sd['Disbursement Type'].str.contains('Refund', na=False)]
+    spend = dict(generated=out['generated'], asof=day(sd['dt'].max()), total=round(float(sd['amt'].sum()), 2), n=int(len(sd)),
+                 byType={k: dict(amt=round(float(g['amt'].sum()), 2), n=int(len(g))) for k, g in sd.groupby('Disbursement Type')},
+                 refunds=dict(amt=round(float(ref['amt'].sum()), 2), n=int(len(ref))),
+                 byPurpose=[dict(purpose=str(k), amt=round(float(v), 2)) for k, v in ops.groupby('Purpose')['amt'].sum().sort_values(ascending=False).items()],
+                 vendors=[dict(name=str(k), amt=round(float(g['amt'].sum()), 2), n=int(len(g)), purposes=sorted(set(g['Purpose'].dropna().astype(str)))[:4]) for k, g in sorted(ops.groupby('Contact Name'), key=lambda kv: -kv[1]['amt'].sum())[:40]],
+                 months={m: round(float(g['amt'].sum()), 2) for m, g in sd.groupby('m')},
+                 transfersToPBG=round(float(ops[ops['Contact Name'].str.contains('Battleground', na=False)]['amt'].sum()), 2))
+    json.dump(spend, open('public/finance/spend.json', 'w'), separators=(',', ':'), default=str)
+    out['spend'] = dict(total=spend['total'], ops=spend['byType'].get('Operating Expenditure', {}).get('amt', 0), refunds=spend['refunds'], transfersToPBG=spend['transfersToPBG'], asof=spend['asof'], lastMonth=max(spend['months'].items())[1] if spend['months'] else 0)
+    json.dump(out, open(OUT, 'w'), separators=(',', ':'), default=str)
+    print('spend.json', spend['total'], spend['n'], 'rows')
